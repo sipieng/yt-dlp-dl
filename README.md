@@ -33,6 +33,8 @@ uv sync
 3. 再次运行 `notepad $PROFILE`，打开配置文件，输入以下内容并保存。
     
     ```powershell
+    # 请把 <PROJECT DIR> 替换为项目所在目录
+
     function dl {
         uv run --project <PROJECT DIR> yt-dlp @args
     }
