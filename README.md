@@ -9,7 +9,7 @@
 ### 把仓库克隆到本地
 
 ```bash
-git https://github.com/sipieng/yt-dlp-dl.git
+git clone https://github.com/sipieng/yt-dlp-dl.git
 ```
 
 ### 使用 uv 创建虚拟环境并安装依赖

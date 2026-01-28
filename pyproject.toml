@@ -1,7 +1,7 @@
 [project]
 name = "yt-dlp-dl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Use yt-dlp to download videos in global env by alias in Windows PowerShell"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
