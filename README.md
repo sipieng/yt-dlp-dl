@@ -2,19 +2,21 @@
 
 ## 使用方法（Windows 11）
 
----
-
 ### 前提
 
 安装 Python、ffmpeg、uv、git
 
 ### 把仓库克隆到本地
 
-`git https://github.com/sipieng/yt-dlp-dl.git`
+```bash
+git https://github.com/sipieng/yt-dlp-dl.git
+```
 
 ### 使用 uv 创建虚拟环境并安装依赖
 
-`uv sync`
+```bash
+uv sync
+```
 
 运行 `uv run yt-dlp --version`，获得版本号即说明安装成功。
 
@@ -47,21 +49,19 @@
     在全局环境下运行 `dl -- version`。此时应能正常输出版本号。
 
     ```powershell
-    PS C:\Users\xxx> dl --version
+    dl --version
     2025.12.08
     ```
     这样设置完之后，在全局环境下直接运行 `dl <URL>` 即可下载视频。
 
 ## yt-dlp 的一些用法
 
----
-
 视频 URL: `https://m.youtube.com/watch?v=ZEjLaSf4cCA`
 
 ### 获取 youtube 视频信息：`yt-dlp <URL> -F / --list-formats`
 
 ```powershell
-PS C:\Users\xxx> **dl -F https://m.youtube.com/watch?v=ZEjLaSf4cCA**
+PS C:\Users\xxx> dl -F https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] Extracting URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] ZEjLaSf4cCA: Downloading webpage
 WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
@@ -94,7 +94,7 @@ sb0 mhtml 320x180      1    │                 mhtml │ images                
 ### 默认下载最佳视频与音频：`yt-dlp <URL>`
 
 ```powershell
-PS C:\Users\xxx> **dl https://m.youtube.com/watch?v=ZEjLaSf4cCA**
+PS C:\Users\xxx> dl https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] Extracting URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] ZEjLaSf4cCA: Downloading webpage
 WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
@@ -124,7 +124,7 @@ Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎�
 ### 只下载某个 ID 的音频或视频：`yt-dlp -f <ID> <URL>`
 
 ```powershell
-PS C:\Users\xxx> **dl -f 140 https://m.youtube.com/watch?v=ZEjLaSf4cCA**
+PS C:\Users\xxx> dl -f 140 https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] Extracting URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] ZEjLaSf4cCA: Downloading webpage
 WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
@@ -144,7 +144,7 @@ WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped 
 ### 选择指定的视频和音频并封装为受支持的格式：`yt-dlp -f <VIDEO_ID> + <AUDIO_ID> --merge-output-format <FORMAT> <URL>`
 
 ```powershell
-PS C:\Users\xxx> **dl -f 140+134 --merge-output-format mp4 https://m.youtube.com/watch?v=ZEjLaSf4cCA**
+PS C:\Users\xxx> dl -f 140+134 --merge-output-format mp4 https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] Extracting URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] ZEjLaSf4cCA: Downloading webpage
 WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
@@ -166,7 +166,7 @@ Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎�
 ### 我只关心“最终是 mp4”，不指定 ID: `yt-dlp -f "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" --merge-output-format mp4 <URL>`
 
 ```powershell
-PS C:\Users\xxx> **dl -f "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" https://m.youtube.com/watch?v=ZEjLaSf4cCA**
+PS C:\Users\xxx> dl -f "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] Extracting URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA
 [youtube] ZEjLaSf4cCA: Downloading webpage
 WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
