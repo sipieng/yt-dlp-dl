@@ -339,6 +339,9 @@
                 <div class="loading-spinner"></div>
                 <p id="loadingText">正在处理...</p>
             </div>
+            
+            <!-- 错误消息 -->
+            <div class="error-message" id="errorMessage" style="margin-top: 15px;"></div>
         </div>
         
         <!-- 视频信息区域 (解析后显示) -->
@@ -354,14 +357,14 @@
             <h2>2. 选择下载模式</h2>
             <div class="mode-selector">
                 <div class="mode-option">
-                    <input type="radio" id="modeDefault" name="downloadMode" value="default" checked onchange="toggleMode()">
+                    <input type="radio" id="modeDefault" name="downloadMode" value="default" onchange="toggleMode()">
                     <label for="modeDefault">
                         <strong>默认最佳质量</strong><br>
                         <small>自动选择最佳画质和音质 (yt-dlp默认)</small>
                     </label>
                 </div>
                 <div class="mode-option">
-                    <input type="radio" id="modeCustom" name="downloadMode" value="custom" onchange="toggleMode()">
+                    <input type="radio" id="modeCustom" name="downloadMode" value="custom" checked onchange="toggleMode()">
                     <label for="modeCustom">
                         <strong>自定义选择</strong><br>
                         <small>手动选择视频、音频、字幕格式</small>
@@ -379,7 +382,7 @@
                 <thead>
                     <tr>
                         <th width="60">选择</th>
-                        <th width="80">类型</th>
+                        <th width="100">类型</th>
                         <th width="80">ID</th>
                         <th>格式</th>
                         <th>分辨率</th>
@@ -456,9 +459,6 @@
             <div id="statusContent"></div>
             <button id="openFolderBtn" class="btn btn-secondary" onclick="openDownloadFolder()">打开下载文件夹</button>
         </div>
-        
-        <!-- 错误消息 -->
-        <div class="error-message" id="errorMessage"></div>
     </div>
     
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

@@ -21,10 +21,7 @@ function showError(message) {
     errorDiv.textContent = message;
     errorDiv.classList.add('show');
     
-    // 5秒后自动隐藏
-    setTimeout(() => {
-        errorDiv.classList.remove('show');
-    }, 5000);
+    // 错误消息一直保留，直到用户点击清空按钮或输入新URL
 }
 
 /**
@@ -116,6 +113,9 @@ async function parseUrl() {
         return;
     }
     
+    // 清空之前的解析结果，避免误导
+    clearPreviousResult();
+    
     try {
         // 显示加载状态
         showLoading('正在解析视频信息...');
@@ -144,8 +144,14 @@ async function parseUrl() {
         // 显示视频信息区域
         document.getElementById('videoInfo').classList.add('show');
         document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('clearBtn').style.display = 'inline-block';
-        
+        // 清空按钮由 input 事件监听器控制，只要 URL 不为空就会显示
+
+        // 如果当前是自定义模式，显示自定义选择区域
+        const mode = document.querySelector('input[name="downloadMode"]:checked').value;
+        if (mode === 'custom') {
+            document.getElementById('customSelection').style.display = 'block';
+        }
+
         // 存储格式数据供后续使用
         currentFormats = data;
         
@@ -165,6 +171,9 @@ async function parseUrl() {
         }
         
     } catch (error) {
+        // 清空旧结果，但保留错误消息显示
+        clearPreviousResultKeepError();
+        // 显示错误消息
         showError('解析失败: ' + error.message);
         console.error('解析URL时出错:', error);
     } finally {
@@ -174,17 +183,68 @@ async function parseUrl() {
 }
 
 /**
+ * 清空之前的解析结果（保留错误消息）
+ */
+function clearPreviousResultKeepError() {
+    // 隐藏视频信息区域
+    document.getElementById('videoInfo').classList.remove('show');
+    
+    // 清空格式表格
+    document.getElementById('formatsTableBody').innerHTML = '';
+    
+    // 禁用下载按钮
+    document.getElementById('downloadBtn').disabled = true;
+    
+    // 重置当前格式数据
+    currentFormats = null;
+    
+    // 重置选择状态
+    selectedFormats = {
+        video: [],
+        audio: [],
+        combined: [],
+        subtitle: []
+    };
+    
+    // 清除之前的任务状态
+    currentTaskId = null;
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
+    
+    // 隐藏自定义选择区域
+    document.getElementById('customSelection').style.display = 'none';
+
+    // 重置下载模式为默认（自定义选择）
+    document.getElementById('modeCustom').checked = true;
+    // 注意：不隐藏错误消息
+}
+
+/**
+ * 清空之前的解析结果（包括错误消息）
+ */
+function clearPreviousResult() {
+    clearPreviousResultKeepError();
+    // 隐藏错误消息
+    document.getElementById('errorMessage').classList.remove('show');
+}
+
+/**
  * 显示视频基本信息
  */
 function displayVideoInfo(data) {
     document.getElementById('videoTitle').textContent = data.title || '未知标题';
     
-    // 格式化时长
+    // 格式化时长为 HH:MM:SS.xxx
     if (data.duration) {
-        const minutes = Math.floor(data.duration / 60);
-        const seconds = data.duration % 60;
+        const totalSeconds = Math.floor(data.duration);
+        const milliseconds = Math.round((data.duration - totalSeconds) * 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
         document.getElementById('duration').textContent = 
-            `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
     }
     
     // 计算格式总数
@@ -479,6 +539,22 @@ function cancelDownload() {
 document.addEventListener('DOMContentLoaded', function() {
     // 设置URL输入框回车键触发解析
     const urlInput = document.getElementById('urlInput');
+    const clearBtn = document.getElementById('clearBtn');
+    
+    // 监听输入框内容变化，控制清空按钮显示
+    urlInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            clearBtn.style.display = 'inline-block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+    });
+    
+    // 初始检查
+    if (urlInput.value.trim()) {
+        clearBtn.style.display = 'inline-block';
+    }
+    
     urlInput.addEventListener('keypress', function(event) {
         if (event.key === 'Enter') {
             parseUrl();
@@ -516,16 +592,14 @@ function toggleMode() {
  */
 function clearForm() {
     document.getElementById('urlInput').value = '';
-    document.getElementById('videoInfo').classList.remove('show');
-    document.getElementById('downloadBtn').disabled = true;
     document.getElementById('clearBtn').style.display = 'none';
-    
-    // 清空格式表格
-    document.getElementById('formatsTableBody').innerHTML = '';
-    
-    // 清空选择
-    selectedFormats = { video: [], audio: [], combined: [], subtitle: [] };
-    
+
+    // 使用 clearPreviousResult 清空所有结果
+    clearPreviousResult();
+
+    // 显示自定义选择区域（因为现在默认是自定义模式）
+    document.getElementById('customSelection').style.display = 'block';
+
     // 清空进度和状态
     updateProgress(0, '');
     document.getElementById('progressContainer').classList.remove('show');

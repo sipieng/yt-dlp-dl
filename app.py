@@ -90,7 +90,7 @@ def parse_url():
             app.logger.error(f"解析URL时出错: {repr(error_msg)}", exc_info=True)
         except:
             app.logger.error("解析URL时出错（无法记录错误详情）", exc_info=True)
-        return jsonify({"error": f"解析失败: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 def _clean_json_data(obj):
