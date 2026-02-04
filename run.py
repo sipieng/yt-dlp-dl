@@ -37,7 +37,7 @@ def main():
     print("\n启动信息:")
     print("  • Flask服务器将运行在: http://127.0.0.1:5000")
     print("  • 按 Ctrl+C 停止服务器")
-    print("  • 测试URL: https://m.youtube.com/watch?v=ZEjLaSf4cCA")
+    print("  • 测试URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA")
     print("\n" + "=" * 60)
 
     # 尝试自动打开浏览器

@@ -34,25 +34,12 @@ uv sync
 
 ### 2. 启动Web UI
 
-#### Windows用户：
 ```bash
-# 方法1：使用批处理文件
+# 方法1：直接运行批处理文件（Windows）
 run.bat
 
 # 方法2：直接运行Python脚本
-uv run python run.py
-
-# 方法3：直接运行app.py
-uv run python app.py
-```
-
-#### macOS/Linux用户：
-```bash
-# 方法1：使用Python脚本
-uv run python run.py
-
-# 方法2：直接运行app.py
-uv run python app.py
+uv run run.py
 ```
 
 ### 3. 访问Web界面
@@ -66,7 +53,7 @@ uv run python app.py
 
 1. **输入视频URL**
    - 在输入框中粘贴YouTube或其他支持网站的视频链接
-   - 示例：`https://m.youtube.com/watch?v=ZEjLaSf4cCA`
+   - 示例：`https://www.youtube.com/watch?v=ZEjLaSf4cCA`
 
 2. **解析格式**
    - 点击"解析格式"按钮
@@ -270,13 +257,6 @@ uv add "yt-dlp@latest"
 ## 许可证
 
 本项目基于MIT许可证开源。详见LICENSE文件。
-
-## 支持与反馈
-
-如有问题或建议，请：
-1. 查看[原始README.md](README.md)中的命令行用法
-2. 提交GitHub Issue
-3. 联系我们获取支持
 
 ---
 **Happy downloading! 🎬**
