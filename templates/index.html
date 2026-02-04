@@ -327,12 +327,17 @@
         <div class="section">
             <h2>1. 输入视频URL</h2>
             <div class="url-input">
-                <input type="url" 
-                       id="urlInput" 
+                <input type="url"
+                       id="urlInput"
                        placeholder="粘贴视频URL (例如: https://www.youtube.com/watch?v=ZEjLaSf4cCA)"
                        value="https://www.youtube.com/watch?v=ZEjLaSf4cCA">
                 <button id="parseBtn" onclick="parseUrl()">解析格式</button>
                 <button id="clearBtn" class="btn-danger" onclick="clearForm()" style="display: none;">清空</button>
+            </div>
+            <!-- 加载指示器 -->
+            <div class="loading" id="loading" style="display: none; margin-top: 15px;">
+                <div class="loading-spinner"></div>
+                <p id="loadingText">正在处理...</p>
             </div>
         </div>
         
@@ -369,67 +374,28 @@
         <div id="customSelection" class="section" style="display: none;">
             <h2>3. 自定义格式选择</h2>
             
-            <!-- 格式标签页 -->
-            <div class="format-tabs">
-                <div class="tab active" data-tab="video">视频格式</div>
-                <div class="tab" data-tab="audio">音频格式</div>
-                <div class="tab" data-tab="subtitle">字幕格式</div>
-            </div>
-            
-            <!-- 视频格式表格 -->
-            <table id="videoTable" class="format-table active">
+            <!-- 统一格式表格 -->
+            <table id="formatsTable" class="format-table active">
                 <thead>
                     <tr>
                         <th width="60">选择</th>
+                        <th width="80">类型</th>
                         <th width="80">ID</th>
                         <th>格式</th>
                         <th>分辨率</th>
-                        <th>编码</th>
+                        <th>视频编码</th>
+                        <th>音频编码</th>
                         <th>大小</th>
                         <th>码率</th>
                     </tr>
                 </thead>
-                <tbody id="videoTableBody">
-                    <!-- 动态填充 -->
-                </tbody>
-            </table>
-            
-            <!-- 音频格式表格 -->
-            <table id="audioTable" class="format-table">
-                <thead>
-                    <tr>
-                        <th width="60">选择</th>
-                        <th width="80">ID</th>
-                        <th>格式</th>
-                        <th>编码</th>
-                        <th>大小</th>
-                        <th>码率</th>
-                        <th>采样率</th>
-                    </tr>
-                </thead>
-                <tbody id="audioTableBody">
-                    <!-- 动态填充 -->
-                </tbody>
-            </table>
-            
-            <!-- 字幕格式表格 -->
-            <table id="subtitleTable" class="format-table">
-                <thead>
-                    <tr>
-                        <th width="60">选择</th>
-                        <th width="80">ID</th>
-                        <th>格式</th>
-                        <th>语言</th>
-                        <th>备注</th>
-                    </tr>
-                </thead>
-                <tbody id="subtitleTableBody">
+                <tbody id="formatsTableBody">
                     <!-- 动态填充 -->
                 </tbody>
             </table>
             
             <div id="noFormats" class="loading" style="display: none;">
-                该分类没有可用格式
+                没有可用格式
             </div>
         </div>
         
@@ -488,17 +454,11 @@
         <!-- 状态消息 -->
         <div class="status-message" id="statusMessage">
             <div id="statusContent"></div>
-            <a id="downloadLink" class="download-link" href="#" target="_blank">下载文件</a>
+            <button id="openFolderBtn" class="btn btn-secondary" onclick="openDownloadFolder()">打开下载文件夹</button>
         </div>
         
         <!-- 错误消息 -->
         <div class="error-message" id="errorMessage"></div>
-        
-        <!-- 加载指示器 -->
-        <div class="loading" id="loading" style="display: none;">
-            <div class="loading-spinner"></div>
-            <p id="loadingText">正在处理...</p>
-        </div>
     </div>
     
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>

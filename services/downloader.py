@@ -7,6 +7,7 @@ import os
 import re
 import json
 import sys
+import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 import tempfile
@@ -72,11 +73,12 @@ class YouTubeDownloader:
         Returns:
             包含视频信息和格式列表的字典
         """
+        import sys
+
         try:
             # 调试信息
-            import sys
-
             print(f"[DEBUG] extract_info called for URL: {url}", file=sys.stderr)
+            sys.stderr.flush()
 
             opts = self.base_opts.copy()
             opts.update(
@@ -122,7 +124,10 @@ class YouTubeDownloader:
                     "uploader": info.get("uploader", ""),
                     "upload_date": info.get("upload_date", ""),
                     "view_count": info.get("view_count", 0),
-                    "formats": categorized_formats,
+                    "formats": categorized_formats.get("formats", []),
+                    "has_separate_streams": categorized_formats.get(
+                        "has_separate_streams", False
+                    ),
                     "best_default": best_default,
                     "url": url,
                     "extractor": info.get("extractor", ""),
@@ -139,33 +144,35 @@ class YouTubeDownloader:
 
         except ExtractorError as e:
             print(f"[DEBUG] ExtractorError: {e}", file=sys.stderr)
+            sys.stderr.flush()
             raise ValueError(f"提取视频信息失败: {str(e)}")
         except DownloadError as e:
             print(f"[DEBUG] DownloadError: {e}", file=sys.stderr)
+            sys.stderr.flush()
             raise ValueError(f"下载信息失败: {str(e)}")
         except Exception as e:
             print(
                 f"[DEBUG] Unexpected error in extract_info: {type(e).__name__}: {e}",
                 file=sys.stderr,
             )
-            import traceback
-
+            sys.stderr.flush()
             traceback.print_exc(file=sys.stderr)
             raise ValueError(f"处理视频时出错: {str(e)}")
 
-    def _categorize_formats(self, formats: List[Dict]) -> Dict[str, List[Dict]]:
+    def _categorize_formats(self, formats: List[Dict]) -> Dict[str, Any]:
         """
-        将格式分类为视频、音频、字幕
+        将格式分类为视频、音频、字幕，并添加类型标记
 
         Args:
             formats: 原始格式列表
 
         Returns:
-            分类后的格式字典
+            包含分类格式和元信息的字典
         """
-        video_formats = []
-        audio_formats = []
-        subtitle_formats = []
+        all_formats = []
+        has_pure_video = False
+        has_pure_audio = False
+        has_combined = False
 
         for fmt in formats:
             # 清理格式数据
@@ -176,52 +183,53 @@ class YouTubeDownloader:
             acodec = fmt.get("acodec", "none")
             format_id = fmt.get("format_id", "")
 
-            # 判断是否为纯音频
+            # 判断格式类型并添加标记
             if vcodec == "none" and acodec != "none":
-                audio_formats.append(cleaned_fmt)
+                # 纯音频
+                cleaned_fmt["format_type"] = "audio"
+                has_pure_audio = True
+                all_formats.append(cleaned_fmt)
 
-            # 判断是否为纯视频
             elif vcodec != "none" and acodec == "none":
-                video_formats.append(cleaned_fmt)
+                # 纯视频
+                cleaned_fmt["format_type"] = "video"
+                has_pure_video = True
+                all_formats.append(cleaned_fmt)
 
-            # 判断是否为既有视频又有音频（合并格式）
             elif vcodec != "none" and acodec != "none":
-                # 同时添加到视频和音频列表，但标记为合并格式
-                video_copy = cleaned_fmt.copy()
-                video_copy["is_combined"] = True
-                video_formats.append(video_copy)
+                # 音视频合并
+                cleaned_fmt["format_type"] = "combined"
+                has_combined = True
+                all_formats.append(cleaned_fmt)
 
-                audio_copy = cleaned_fmt.copy()
-                audio_copy["is_combined"] = True
-                audio_formats.append(audio_copy)
-
-            # 其他情况（可能是字幕或其他格式）
             else:
                 # 检查是否为字幕格式
                 if fmt.get("ext") in ["vtt", "srt", "ass", "ssa", "ttml"]:
-                    subtitle_formats.append(cleaned_fmt)
+                    cleaned_fmt["format_type"] = "subtitle"
+                    all_formats.append(cleaned_fmt)
 
-        # 按质量排序
-        video_formats.sort(
+        # 按质量排序（合并格式优先，然后是视频，然后是音频）
+        all_formats.sort(
             key=lambda x: (
+                0
+                if x.get("format_type") == "combined"
+                else (
+                    1
+                    if x.get("format_type") == "video"
+                    else (2 if x.get("format_type") == "audio" else 3)
+                ),
                 -self._get_resolution_value(x.get("resolution", "0x0")),
                 -(x.get("tbr") or 0),
                 x.get("format_id", ""),
             )
         )
 
-        audio_formats.sort(
-            key=lambda x: (
-                -(x.get("abr") or 0),
-                -(x.get("asr") or 0),
-                x.get("format_id", ""),
-            )
-        )
+        # 判断是否只有合并格式（没有独立的音视频流）
+        has_separate_streams = has_pure_video and has_pure_audio
 
         return {
-            "video": video_formats,
-            "audio": audio_formats,
-            "subtitle": subtitle_formats,
+            "formats": all_formats,
+            "has_separate_streams": has_separate_streams,
         }
 
     def _clean_format_data(self, fmt: Dict) -> Dict:
@@ -491,10 +499,16 @@ class YouTubeDownloader:
             if filename:
                 # 清理文件名，移除非法字符
                 safe_filename = sanitize_filename(filename)
+                # 检查文件是否已存在，如果存在则添加数字后缀
+                safe_filename = self._get_unique_filename(safe_filename)
                 # 保留扩展名空间
                 ydl_opts["outtmpl"] = str(
                     self.downloads_dir / f"{safe_filename}.%(ext)s"
                 )
+            else:
+                # 没有自定义文件名时，使用 yt-dlp 的默认模板
+                # 但为了支持自动重命名，我们需要先获取视频信息
+                pass  # 将在下载前处理
 
             # 构建格式选择字符串
             if mode == "default" and formats:
@@ -507,21 +521,47 @@ class YouTubeDownloader:
                     ydl_opts["format"] = "best"
 
             elif mode == "custom" and formats:
-                # 使用自定义格式
-                video_id = formats.get("video")
-                audio_id = formats.get("audio")
-                subtitle_id = formats.get("subtitle")
+                # 使用自定义格式（支持多选）
+                selected = formats.get("selected", [])
+                video_ids = formats.get("video", [])
+                audio_ids = formats.get("audio", [])
+                combined_ids = formats.get("combined", [])
+                subtitle_ids = formats.get("subtitle", [])
+                has_separate_streams = formats.get("has_separate_streams", True)
 
                 format_parts = []
-                if video_id:
-                    format_parts.append(video_id)
-                if audio_id:
-                    format_parts.append(audio_id)
-                if subtitle_id:
-                    format_parts.append(subtitle_id)
+
+                # 如果选择了合并格式，直接使用
+                if combined_ids:
+                    format_parts.extend(combined_ids)
+
+                # 如果有独立的音视频流，且用户选择了它们
+                if has_separate_streams:
+                    if video_ids:
+                        format_parts.extend(video_ids)
+                    if audio_ids:
+                        format_parts.extend(audio_ids)
+                else:
+                    # 如果没有独立流，但用户选择了纯视频或纯音频
+                    # 这种情况通常不应该发生，但为了兼容保留
+                    if video_ids:
+                        format_parts.extend(video_ids)
+                    if audio_ids:
+                        format_parts.extend(audio_ids)
+
+                # 添加字幕
+                if subtitle_ids:
+                    format_parts.extend(subtitle_ids)
 
                 if format_parts:
-                    ydl_opts["format"] = "+".join(format_parts)
+                    # 去重并保持顺序
+                    seen = set()
+                    unique_parts = []
+                    for part in format_parts:
+                        if part not in seen:
+                            seen.add(part)
+                            unique_parts.append(part)
+                    ydl_opts["format"] = "+".join(unique_parts)
                 else:
                     ydl_opts["format"] = "best"
 
@@ -531,6 +571,29 @@ class YouTubeDownloader:
 
             # 执行下载
             with YoutubeDL(ydl_opts) as ydl:
+                # 先获取视频信息（不下载）
+                info = ydl.extract_info(url, download=False)
+
+                if not info:
+                    return False, "下载失败：无法获取视频信息", None
+
+                # 如果没有自定义文件名，检查默认文件名是否已存在
+                if not filename:
+                    # 使用 yt-dlp 的 prepare_filename 获取默认文件名
+                    default_filename = ydl.prepare_filename(info)
+                    # 提取基础文件名（不含扩展名）
+                    base_name = Path(default_filename).stem
+                    # 获取唯一文件名
+                    unique_base = self._get_unique_filename(base_name)
+                    # 如果文件名已改变，更新输出模板
+                    if unique_base != base_name:
+                        ydl_opts["outtmpl"] = str(
+                            self.downloads_dir / f"{unique_base}.%(ext)s"
+                        )
+                        # 重新创建 YoutubeDL 实例以应用新的模板
+                        ydl = YoutubeDL(ydl_opts)
+
+                # 现在执行实际下载
                 info = ydl.extract_info(url, download=True)
 
                 if not info:
@@ -576,6 +639,37 @@ class YouTubeDownloader:
         if filepath.exists():
             return filepath
         return None
+
+    def _get_unique_filename(self, base_filename: str) -> str:
+        """
+        生成唯一的文件名，避免覆盖已存在的文件
+
+        Args:
+            base_filename: 基础文件名（不含扩展名）
+
+        Returns:
+            唯一的文件名（不含扩展名）
+        """
+        import fnmatch
+
+        # 获取下载目录中的所有文件
+        if not self.downloads_dir.exists():
+            return base_filename
+
+        existing_files = list(self.downloads_dir.iterdir())
+        existing_names = {f.stem for f in existing_files if f.is_file()}
+
+        # 检查基础文件名是否已存在
+        if base_filename not in existing_names:
+            return base_filename
+
+        # 如果存在，尝试添加数字后缀
+        counter = 2
+        while True:
+            new_filename = f"{base_filename}_{counter}"
+            if new_filename not in existing_names:
+                return new_filename
+            counter += 1
 
     def cleanup_old_files(self, max_age_hours: int = 24):
         """清理旧文件（可选功能）"""

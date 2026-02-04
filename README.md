@@ -1,209 +1,260 @@
-# 使用 `yt-dlp` 下载在线视频
+# yt-dlp Web UI
 
-## 使用方法（Windows 11）
+** 使用 AI 开发。仅在 Windows 11 下测试通过。**
+基于Flask的Web界面，为yt-dlp提供图形化操作界面。支持解析视频格式、选择下载质量、自定义文件名等功能。
 
-### 前提
+## 待办
 
-安装 Python、ffmpeg、uv、git
+[ ] 选择一条视频加两条音频，默认得到的结果无论是mp4还是mkv都只有一条视频和一条音频。（优先级：低）
+[ ] 下载路径可自定义。（优先级：中）
+[ ] 自定义选择的音视频流与封装格式不符时（如选择了把 opus 音频封装入 mp4）自动调用 ffmpeg 转码。（优先级：低）
 
-### 把仓库克隆到本地
+## 功能特性
+
+1. **URL解析**：输入视频URL，自动获取所有可用格式（视频、音频、字幕）
+2. **下载模式**：
+   - **默认最佳质量**：自动选择最佳画质和音质（yt-dlp默认逻辑）
+   - **自定义选择**：手动选择具体的视频、音频、字幕或合并格式
+3. **下载选项**：
+   - 自定义文件名（留空使用视频原标题）
+   - 选择输出容器格式（MP4/MKV/WebM或自动选择）
+   - 下载路径配置（默认：`./downloads/`）
+4. **实时进度**：显示下载进度、速度和预计完成时间
+5. **文件管理**：下载完成后提供直接下载链接
+
+## 系统要求
+
+- Python 3.13+
+- yt-dlp 2025.12.8+
+- Flask 3.0+
+
+## 安装与运行
+
+### 1. 安装依赖
+
+项目使用[UV](https://github.com/astral-sh/uv)管理Python依赖。确保已安装UV，然后运行：
 
 ```bash
-git clone https://github.com/sipieng/yt-dlp-dl.git
-```
-
-### 使用 uv 创建虚拟环境并安装依赖
-
-```bash
+# 同步依赖（会自动安装Flask和yt-dlp）
 uv sync
 ```
 
-运行 `uv run yt-dlp --version`，获得版本号即说明安装成功。
+### 2. 启动Web UI
 
-此时如果没有其他要求，已经可以通过 `uv run yt-dlp <URL>` 下载在线视频了。
+```bash
+# 方法1：直接运行批处理文件（Windows）
+run.bat
 
-### 使用全局别名（alias）进一步简化操作
-
-1. 在 PowerShell 下运行 `notepad $PROFILE`，如果提示文件不存在或找不到，就按步骤 2 新建一个。
-
-2. 创建 PowerShell Profile（如果不存在的话）：`New-Item -Type File -Path $PROFILE -Force`。
-    
-    此命令会在 `C:\Users\xxx\Documents` 目录下创建 `WindowsPowerShell` 文件夹，并在其中创建一个 `Microsoft.PowerShell_profile.ps1` 的文本文件。
-
-3. 再次运行 `notepad $PROFILE`，打开配置文件，输入以下内容并保存。
-    
-    ```powershell
-    # 请把 <PROJECT DIR> 替换为项目所在目录
-
-    function dl {
-        uv run --project <PROJECT DIR> yt-dlp @args
-    }
-    ```
-    
-    以上把 `uv run --project <PROJECT DIR> yt-dlp @args` 命令映射为了全局别名 `dl`。其中 `--project <PROJECT DIR>` 的作用是指定项目的工作目录，从而绕过需要通过 `CD` 命令进入项目目录再运行 `yt-dlp` 的繁琐步骤。
-    
-    ⚠ 完成后需要**重启 PowerShell**，因为 Profile 文件只在启动时加载一次。
-    
-    ⚠ 如果 PowerShell 提示 `无法加载文件 C:\Users\xxx\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1，因为在此系统上禁止运行脚本`，则进入“终端管理员”，然后运行 `set-executionpolicy remotesigned` 即可。    
-
-4. 验证
-
-    在全局环境下运行 `dl -- version`。此时应能正常输出版本号。
-
-    ```powershell
-    dl --version
-    2025.12.08
-    ```
-    这样设置完之后，在全局环境下直接运行 `dl <URL>` 即可下载视频。
-
-## yt-dlp 的一些用法
-
-视频 URL: `https://www.youtube.com/watch?v=ZEjLaSf4cCA`
-
-### 获取 youtube 视频信息：`yt-dlp <URL> -F / --list-formats`
-
-```powershell
-PS C:\Users\xxx> dl -F https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] Extracting URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] ZEjLaSf4cCA: Downloading webpage
-WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
-[youtube] ZEjLaSf4cCA: Downloading android sdkless player API JSON
-[youtube] ZEjLaSf4cCA: Downloading web safari player API JSON
-WARNING: [youtube] ZEjLaSf4cCA: Some web_safari client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[youtube] ZEjLaSf4cCA: Downloading m3u8 information
-WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[info] Available formats for ZEjLaSf4cCA:
-ID  EXT   RESOLUTION FPS CH │  FILESIZE   TBR PROTO │ VCODEC        VBR ACODEC      ABR ASR MORE INFO
-─────────────────────────────────────────────────────────────────────────────────────────────────────────────
-sb3 mhtml 48x27        0    │                 mhtml │ images                                storyboard
-sb2 mhtml 80x45        1    │                 mhtml │ images                                storyboard
-sb1 mhtml 160x90       1    │                 mhtml │ images                                storyboard
-sb0 mhtml 320x180      1    │                 mhtml │ images                                storyboard
-139 m4a   audio only      2 │   1.35MiB   49k https │ audio only        mp4a.40.5   49k 22k low, m4a_dash
-140 m4a   audio only      2 │   3.59MiB  129k https │ audio only        mp4a.40.2  129k 44k medium, m4a_dash
-251 webm  audio only      2 │   3.63MiB  131k https │ audio only        opus       131k 48k medium, webm_dash
-91  mp4   256x144     24    │ ~ 2.85MiB  103k m3u8  │ avc1.4D400C       mp4a.40.5
-160 mp4   256x144     24    │   1.27MiB   46k https │ avc1.4d400c   46k video only          144p, mp4_dash
-93  mp4   640x360     24    │ ~10.47MiB  378k m3u8  │ avc1.4D401E       mp4a.40.2
-134 mp4   640x360     24    │   5.95MiB  215k https │ avc1.4d401e  215k video only          360p, mp4_dash
-18  mp4   640x360     24  2 │  13.48MiB  486k https │ avc1.42001E       mp4a.40.2       44k 360p
-95  mp4   1280x720    24    │ ~29.73MiB 1075k m3u8  │ avc1.64001F       mp4a.40.2
-136 mp4   1280x720    24    │  23.28MiB  840k https │ avc1.64001f  840k video only          720p, mp4_dash
-96  mp4   1920x1080   24    │ ~49.28MiB 1782k m3u8  │ avc1.640028       mp4a.40.2
-137 mp4   1920x1080   24    │  38.50MiB 1389k https │ avc1.640028 1389k video only          1080p, mp4_dash
+# 方法2：直接运行Python脚本
+uv run run.py
 ```
 
-### 默认下载最佳视频与音频：`yt-dlp <URL>`
+### 3. 访问Web界面
 
-```powershell
-PS C:\Users\xxx> dl https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] Extracting URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] ZEjLaSf4cCA: Downloading webpage
-WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
-[youtube] ZEjLaSf4cCA: Downloading android sdkless player API JSON
-[youtube] ZEjLaSf4cCA: Downloading web safari player API JSON
-WARNING: [youtube] ZEjLaSf4cCA: Some web_safari client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[youtube] ZEjLaSf4cCA: Downloading m3u8 information
-WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[info] ZEjLaSf4cCA: Downloading 1 format(s): 137+251
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f137.mp4
-[download] 100% of   38.50MiB in 00:00:07 at 4.99MiB/s
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f251.webm
-[download] 100% of    3.63MiB in 00:00:01 at 2.77MiB/s
-[Merger] Merging formats into "淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].mkv"
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f251.webm (pass -k to keep)
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f137.mp4 (pass -k to keep)
+服务器启动后，在浏览器中打开：  
+👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
 
-# 得到的视频为mkv格式。从上面获取的信息可以看到：
-# 最佳视频为：ID: 137 mp4 1920x1080 avc1 video only
-# 最佳音频为：ID: 251 webm opus audio only
-# yt-dlp 的默认策略是把上面两个最佳音视频合并，即 137+251
-# 视频编码是 avc1，但 webm 不能封装 avc1
-# 音频编码是 opus，但 mp4 不能封装 opus
-# 所以使用了可以同时接受这两种编码的 mkv 进行封装
+## 使用指南
+
+### 基本流程
+
+1. **输入视频URL**
+   - 在输入框中粘贴YouTube或其他支持网站的视频链接
+
+2. **解析格式**
+   - 点击"解析格式"按钮
+   - 系统将获取视频信息和所有可用格式
+   - 解析成功后显示视频标题、时长和格式数量
+
+3. **选择下载模式**
+   - **默认最佳质量**：自动选择最佳画质和音质（推荐大多数用户）
+   - **自定义选择**：手动选择具体的视频、音频、字幕或合并格式
+
+4. **配置下载选项**
+   - 自定义文件名（可选）
+   - 下载路径（默认：`%USERPROFILE%/downloads/`）
+   - 容器格式（自动/MP4/MKV/WebM）
+
+5. **开始下载**
+   - 点击"开始下载"按钮
+   - 系统将在后台下载视频
+   - 页面显示实时进度、下载速度和预计完成时间
+
+6. **完成下载**
+   - 下载完成后显示"下载完成"消息
+   - 点击"打开下载文件夹"按钮查看下载的视频
+
+### 界面详解
+
+#### 1. URL输入区
+- 输入框：粘贴视频链接
+- 解析按钮：获取视频信息和格式列表
+- 清空按钮：重置当前选择
+
+#### 2. 视频信息区（解析后显示）
+- 视频标题
+- 时长和格式数量统计
+
+#### 3. 格式选择区（自定义模式）
+- **统一表格显示**：所有格式类型（视频/音频/合并/字幕）在同一表格中显示
+- **格式类型标识**：通过颜色标签区分不同格式类型
+- **多选支持**：可同时选择多个格式进行下载
+
+#### 4. 下载选项区
+- **文件名**：自定义输出文件名（不含扩展名）
+- **下载路径**：文件保存目录
+- **容器格式**：输出文件格式
+
+#### 5. 状态显示区
+- 进度条：实时显示下载进度
+- 状态消息：当前操作状态
+
+## 技术架构
+
+### 项目结构
+```
+yt-dlp-dl/
+├── app.py                    # Flask主应用
+├── run.py                    # 启动脚本
+├── run.bat                   # Windows启动脚本
+├── services/
+│   └── downloader.py         # yt-dlp下载器服务
+├── templates/
+│   └── index.html           # 主界面模板
+├── static/
+│   ├── css/
+│   │   └── style.css        # 样式表
+│   └── js/
+│       └── script.js        # 前端交互逻辑
+├── downloads/               # 下载文件存储目录
+├── .gitignore              # Git忽略规则
+├── pyproject.toml          # 项目配置
+├── uv.lock                 # 依赖锁定
+├── README.md               # 原始命令行使用说明
+└── README_WEBUI.md         # Web UI使用说明（本文档）
 ```
 
-### 只下载某个 ID 的音频或视频：`yt-dlp -f <ID> <URL>`
+### 后端API端点
 
-```powershell
-PS C:\Users\xxx> dl -f 140 https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] Extracting URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] ZEjLaSf4cCA: Downloading webpage
-WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
-[youtube] ZEjLaSf4cCA: Downloading android sdkless player API JSON
-[youtube] ZEjLaSf4cCA: Downloading web safari player API JSON
-WARNING: [youtube] ZEjLaSf4cCA: Some web_safari client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[youtube] ZEjLaSf4cCA: Downloading m3u8 information
-WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[info] ZEjLaSf4cCA: Downloading 1 format(s): 140
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].m4a
-[download] 100% of    3.59MiB in 00:00:01 at 2.92MiB/s
-[FixupM4a] Correcting container of "淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].m4a"
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/` | GET | 渲染主页面 |
+| `/api/parse` | POST | 解析URL，返回视频信息和格式列表 |
+| `/api/download` | POST | 启动下载任务 |
+| `/api/status/<task_id>` | GET | 查询下载任务状态 |
+| `/downloads/<filename>` | GET | 下载已完成的文件 |
+| `/health` | GET | 健康检查 |
 
-# 得到了 ID=140 的 m4a 音频文件
+### 前端技术
+- **HTML5**：页面结构
+- **CSS3**：响应式设计，现代化界面
+- **JavaScript (ES6)**：异步交互，实时更新
+- **无框架依赖**：原生实现，轻量高效
+
+## 常见问题
+
+### Q1: 解析视频时显示JavaScript运行时警告
+```
+WARNING: [youtube] No supported JavaScript runtime could be found...
+```
+**原因**：yt-dlp需要JavaScript运行时来解析某些YouTube格式。  
+**解决方案**：安装一个JS运行时（如Deno）：
+```bash
+# 安装Deno（推荐）
+uv add deno
+
+# 或者使用已有Node.js
+uv add nodejs
+```
+**注意**：即使没有JS运行时，大部分视频仍可正常下载，只是可能缺少某些格式。
+
+### Q2: 文件保存位置
+下载的文件默认保存在 `%USERPROFILE%/downloads/` 目录下。  
+可在Web界面中修改下载路径，或直接在服务器文件系统中访问该目录。
+
+### Q3: 同时下载多个视频
+当前版本设计为**单任务下载**，一次只能处理一个下载任务。  
+这是为了防止服务器资源过载。下载完成后可开始新任务。
+
+### Q4: 支持哪些视频网站？
+支持所有yt-dlp支持的网站，包括：
+- YouTube
+- Bilibili
+- 小红书
+- 抖音
+- Twitter
+- TikTok
+- 等1000+个网站
+
+## 注意事项
+
+1. **版权提醒**：请仅下载您有权下载的视频内容，遵守相关法律法规。
+2. **资源使用**：视频下载会占用网络带宽和服务器存储空间。
+3. **文件保留**：下载的文件永久保留在 `%USERPROFILE%/downloads/` 目录中，请定期清理。
+4. **单任务限制**：同时只允许一个下载任务，避免服务器过载。
+
+## 故障排除
+
+### 无法启动Flask服务器
+```bash
+# 检查Python版本
+python --version
+
+# 检查依赖是否安装
+uv pip list | grep -E "(flask|yt-dlp)"
+
+# 检查端口占用
+netstat -ano | findstr :5000  # Windows
+lsof -i :5000                 # macOS/Linux
 ```
 
-### 选择指定的视频和音频并封装为受支持的格式：`yt-dlp -f <VIDEO_ID> + <AUDIO_ID> --merge-output-format <FORMAT> <URL>`
+### 无法解析某些视频
+```bash
+# 更新yt-dlp到最新版本
+uv add yt-dlp -U
 
-```powershell
-PS C:\Users\xxx> dl -f 140+134 --merge-output-format mp4 https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] Extracting URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] ZEjLaSf4cCA: Downloading webpage
-WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
-[youtube] ZEjLaSf4cCA: Downloading android sdkless player API JSON
-[youtube] ZEjLaSf4cCA: Downloading web safari player API JSON
-WARNING: [youtube] ZEjLaSf4cCA: Some web_safari client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[youtube] ZEjLaSf4cCA: Downloading m3u8 information
-WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[info] ZEjLaSf4cCA: Downloading 1 format(s): 140+134
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f140.m4a
-[download] 100% of    3.59MiB in 00:00:01 at 2.76MiB/s
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f134.mp4
-[download] 100% of    5.95MiB in 00:00:02 at 2.41MiB/s
-[Merger] Merging formats into "淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].mp4"
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f140.m4a (pass -k to keep)
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f134.mp4 (pass -k to keep)
+# 检查视频URL是否有效
 ```
 
-### 我只关心“最终是 mp4”，不指定 ID: `yt-dlp -f "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" --merge-output-format mp4 <URL>`
+### 下载进度不更新
+- 刷新页面重新连接
+- 检查浏览器控制台是否有JavaScript错误
+- 重启Flask服务器
 
-```powershell
-PS C:\Users\xxx> dl -f "bv[ext=mp4]+ba[ext=m4a]/b[ext=mp4]" https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] Extracting URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA
-[youtube] ZEjLaSf4cCA: Downloading webpage
-WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
-[youtube] ZEjLaSf4cCA: Downloading android sdkless player API JSON
-[youtube] ZEjLaSf4cCA: Downloading web safari player API JSON
-WARNING: [youtube] ZEjLaSf4cCA: Some web_safari client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[youtube] ZEjLaSf4cCA: Downloading m3u8 information
-WARNING: [youtube] ZEjLaSf4cCA: Some web client https formats have been skipped as they are missing a url. YouTube is forcing SABR streaming for this client. See  https://github.com/yt-dlp/yt-dlp/issues/12482  for more details
-[info] ZEjLaSf4cCA: Downloading 1 format(s): 137+140
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f137.mp4
-[download] 100% of   38.50MiB in 00:00:07 at 5.12MiB/s
-[download] Destination: 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f140.m4a
-[download] 100% of    3.59MiB in 00:00:01 at 2.66MiB/s
-[Merger] Merging formats into "淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].mp4"
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f137.mp4 (pass -k to keep)
-Deleting original file 淚海⧸大頭針AI ｜ 原唱：許茹芸｜『你怎麼捨得讓我的淚 流向海付出的感情永遠 找不回來』（動態歌詞🎵) [ZEjLaSf4cCA].f140.m4a (pass -k to keep)
+## 更新日志
 
-# bv*[ext=mp4] → 最好的 mp4 视频
-# ba[ext=m4a]  → mp4 体系的音频
-# /b[ext=mp4]  → 斜杠表示回退，如果上面不行，就退回单文件 mp4
-# 这是“永远优先 mp4”的写法
-```
+### v1.1.0 (2025-02-04)
+- **支持合并音视频流的平台（如小红书）**
+  - 统一表格显示所有格式类型（视频/音频/合并/字幕）
+  - 添加 `format_type` 字段和 `has_separate_streams` 标志
+  - 支持多选格式，用户可自由选择任意组合
+  - 移除标签页切换，简化用户操作
 
-### 其他
+- **防止文件覆盖 - 自动重命名**
+  - 重复下载同一链接时自动添加数字后缀（如 `_2`, `_3`）
+  - 支持自定义文件名和默认文件名两种情况
 
-```powershell
-# 只要最高质量的音频，不限格式
-yt-dlp -f ba <URL>
+- **"打开下载文件夹"功能**
+  - 将"下载文件"按钮改为"打开下载文件夹"
+  - 支持 Windows/macOS/Linux 系统
+  - 使用非阻塞方式打开文件夹
 
-# 输出到指定目录
-yt-dlp -P "C:\Downloads" <URL>
+- **优化加载提示位置**
+  - 将"正在解析视频信息"提示移到"1. 输入视频URL"模块下方
+  - 用户无需滚动页面即可查看解析状态
 
-# 只要最高质量的 mp4 视频，不要音频
-yt-dlp -f "bv*[ext=mp4]" <URL>
+- **Bug修复**
+  - 修复格式计数显示错误（显示"0 个可用格式"）
+  - 修复重复下载失败问题（不刷新页面直接解析新URL）
+  - 修复双重"下载失败"提示问题
 
-# 指定清晰度（例如 1080p + mp4 格式）
-yt-dlp -f "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]" --merge-output-format mp4 <URL>
-```
+### v1.0.0 (2025-02-02)
+- 初始版本发布
+- 基本视频解析和下载功能
+- 默认/自定义下载模式
+- 实时进度显示
+- 响应式Web界面
+
+## 许可证
+
+本项目基于MIT许可证开源。详见LICENSE文件。

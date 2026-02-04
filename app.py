@@ -267,7 +267,7 @@ def download_worker(task_id, params):
                     {
                         "status": "failed",
                         "error": message,
-                        "message": f"下载失败: {message}",
+                        "message": message or "下载失败",
                     }
                 )
 
@@ -287,6 +287,33 @@ def download_worker(task_id, params):
 def health_check():
     """健康检查端点"""
     return jsonify({"status": "healthy", "service": "yt-dlp-web-ui"})
+
+
+@app.route("/api/open-folder", methods=["POST"])
+def open_download_folder():
+    """打开下载文件夹"""
+    try:
+        import subprocess
+        import platform
+        import os
+
+        folder_path = str(downloader.downloads_dir)
+        # 转换为绝对路径
+        folder_path = os.path.abspath(folder_path)
+        system = platform.system()
+
+        if system == "Windows":
+            # Windows: 使用 explorer 命令，不检查返回值（因为 explorer 可能返回非零值）
+            subprocess.Popen(["explorer", folder_path])
+        elif system == "Darwin":  # macOS
+            subprocess.Popen(["open", folder_path])
+        else:  # Linux
+            subprocess.Popen(["xdg-open", folder_path])
+
+        return jsonify({"success": True, "message": "文件夹已打开"})
+    except Exception as e:
+        app.logger.error(f"打开文件夹时出错: {str(e)}")
+        return jsonify({"error": f"无法打开文件夹: {str(e)}"}), 500
 
 
 # 清理过期任务的函数（可选）

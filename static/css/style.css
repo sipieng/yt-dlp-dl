@@ -331,6 +331,37 @@ button:disabled {
     font-size: 14px;
 }
 
+/* 格式类型标签 */
+.format-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.format-type-badge.type-video {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.format-type-badge.type-audio {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.format-type-badge.type-combined {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.format-type-badge.type-subtitle {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
 /* 单选/复选框样式 */
 input[type="radio"],
 input[type="checkbox"] {
@@ -429,27 +460,13 @@ input[type="checkbox"] {
     display: block;
 }
 
-/* 下载链接 */
-.download-link {
-    display: inline-block;
-    background: var(--secondary-color);
-    color: white;
-    padding: 14px 28px;
-    border-radius: 6px;
-    text-decoration: none;
-    margin-top: 15px;
-    font-weight: 600;
-    transition: all 0.3s;
+/* 打开文件夹按钮 */
+#openFolderBtn {
     display: none;
+    margin-top: 15px;
 }
 
-.download-link:hover {
-    background: var(--secondary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px var(--shadow-light);
-}
-
-.download-link.show {
+#openFolderBtn.show {
     display: inline-block;
 }
 

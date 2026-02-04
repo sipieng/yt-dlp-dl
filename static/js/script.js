@@ -7,9 +7,10 @@ let currentFormats = null;
 let currentTaskId = null;
 let pollInterval = null;
 let selectedFormats = {
-    video: null,
-    audio: null,
-    subtitle: null
+    video: [],
+    audio: [],
+    combined: [],
+    subtitle: []
 };
 
 /**
@@ -66,19 +67,40 @@ function updateProgress(percent, message = '') {
 /**
  * 更新状态消息
  */
-function updateStatus(message, showDownloadLink = false, downloadUrl = '') {
+function updateStatus(message, showOpenFolder = false) {
     const statusDiv = document.getElementById('statusMessage');
     const statusContent = document.getElementById('statusContent');
-    const downloadLink = document.getElementById('downloadLink');
+    const openFolderBtn = document.getElementById('openFolderBtn');
     
     statusContent.textContent = message;
     statusDiv.classList.add('show');
     
-    if (showDownloadLink && downloadUrl) {
-        downloadLink.href = downloadUrl;
-        downloadLink.classList.add('show');
+    if (showOpenFolder) {
+        openFolderBtn.classList.add('show');
     } else {
-        downloadLink.classList.remove('show');
+        openFolderBtn.classList.remove('show');
+    }
+}
+
+/**
+ * 打开下载文件夹
+ */
+async function openDownloadFolder() {
+    try {
+        const response = await fetch('/api/open-folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || '无法打开文件夹');
+        }
+    } catch (error) {
+        showError('打开文件夹失败: ' + error.message);
+        console.error('打开文件夹时出错:', error);
     }
 }
 
@@ -127,6 +149,21 @@ async function parseUrl() {
         // 存储格式数据供后续使用
         currentFormats = data;
         
+        // 重置选择状态
+        selectedFormats = {
+            video: [],
+            audio: [],
+            combined: [],
+            subtitle: []
+        };
+        
+        // 清除之前的任务状态
+        currentTaskId = null;
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+        
     } catch (error) {
         showError('解析失败: ' + error.message);
         console.error('解析URL时出错:', error);
@@ -152,141 +189,74 @@ function displayVideoInfo(data) {
     
     // 计算格式总数
     let formatCount = 0;
-    ['video', 'audio', 'subtitle'].forEach(type => {
-        if (data.formats && data.formats[type]) {
-            formatCount += data.formats[type].length;
-        }
-    });
+    if (data.formats && Array.isArray(data.formats)) {
+        formatCount = data.formats.length;
+    }
     document.getElementById('formatCount').textContent = formatCount;
 }
 
 /**
- * 显示格式列表
+ * 显示格式列表（统一表格）
  */
 function displayFormats(formats) {
-    // 显示视频格式
-    displayVideoFormats(formats.video || []);
-    
-    // 显示音频格式
-    displayAudioFormats(formats.audio || []);
-    
-    // 显示字幕格式
-    displaySubtitleFormats(formats.subtitle || []);
-    
-    // 检查哪些分类有内容
-    const categories = ['video', 'audio', 'subtitle'];
-    categories.forEach(category => {
-        const tableBody = document.getElementById(`${category}TableBody`);
-        if ((formats[category] || []).length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="7" class="empty-message">没有可用的${category}格式</td></tr>`;
-        }
-    });
-}
-
-/**
- * 显示视频格式表格
- */
-function displayVideoFormats(videoFormats) {
-    const tableBody = document.getElementById('videoTableBody');
+    const tableBody = document.getElementById('formatsTableBody');
     tableBody.innerHTML = '';
     
-    videoFormats.forEach(format => {
-        const row = document.createElement('tr');
-        
-        // 格式化文件大小
-        const fileSize = format.filesize ? 
-            (format.filesize / (1024 * 1024)).toFixed(2) + ' MB' : 
-            '未知';
-        
-        // 格式化码率
-        const bitrate = format.tbr ? 
-            format.tbr.toFixed(0) + ' kbps' : 
-            '未知';
-        
-        row.innerHTML = `
-            <td><input type="radio" name="videoFormat" value="${format.format_id}" 
-                   onchange="selectFormat('video', '${format.format_id}')"></td>
-            <td><code>${format.format_id}</code></td>
-            <td><strong>${format.ext.toUpperCase()}</strong></td>
-            <td>${format.resolution || '未知'}</td>
-            <td><small>${format.vcodec || '未知'}</small></td>
-            <td>${fileSize}</td>
-            <td>${bitrate}</td>
-        `;
-        
-        tableBody.appendChild(row);
-    });
-}
-
-/**
- * 显示音频格式表格
- */
-function displayAudioFormats(audioFormats) {
-    const tableBody = document.getElementById('audioTableBody');
-    tableBody.innerHTML = '';
-    
-    audioFormats.forEach(format => {
-        const row = document.createElement('tr');
-        
-        // 格式化文件大小
-        const fileSize = format.filesize ? 
-            (format.filesize / (1024 * 1024)).toFixed(2) + ' MB' : 
-            '未知';
-        
-        // 格式化码率
-        const bitrate = format.tbr ? 
-            format.tbr.toFixed(0) + ' kbps' : 
-            '未知';
-        
-        // 获取采样率
-        const sampleRate = format.asr ? 
-            (format.asr / 1000).toFixed(1) + ' kHz' : 
-            '未知';
-        
-        row.innerHTML = `
-            <td><input type="radio" name="audioFormat" value="${format.format_id}"
-                   onchange="selectFormat('audio', '${format.format_id}')"></td>
-            <td><code>${format.format_id}</code></td>
-            <td><strong>${format.ext.toUpperCase()}</strong></td>
-            <td><small>${format.acodec || '未知'}</small></td>
-            <td>${fileSize}</td>
-            <td>${bitrate}</td>
-            <td>${sampleRate}</td>
-        `;
-        
-        tableBody.appendChild(row);
-    });
-}
-
-/**
- * 显示字幕格式表格
- */
-function displaySubtitleFormats(subtitleFormats) {
-    const tableBody = document.getElementById('subtitleTableBody');
-    tableBody.innerHTML = '';
-    
-    // 如果没有字幕格式
-    if (subtitleFormats.length === 0) {
+    // 如果没有格式
+    if (!formats || formats.length === 0) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align: center; padding: 30px; color: #7f8c8d;">
-                    没有可用的字幕格式
+                <td colspan="9" style="text-align: center; padding: 30px; color: #7f8c8d;">
+                    没有可用的格式
                 </td>
             </tr>
         `;
         return;
     }
     
-    subtitleFormats.forEach(format => {
+    // 显示所有格式
+    formats.forEach(format => {
         const row = document.createElement('tr');
         
+        // 格式化文件大小
+        const fileSize = format.filesize ? 
+            (format.filesize / (1024 * 1024)).toFixed(2) + ' MB' : 
+            '未知';
+        
+        // 格式化码率
+        const bitrate = format.tbr ? 
+            format.tbr.toFixed(0) + ' kbps' : 
+            '未知';
+        
+        // 类型显示
+        const typeLabels = {
+            'video': '视频',
+            'audio': '音频',
+            'combined': '音视频',
+            'subtitle': '字幕'
+        };
+        const typeLabel = typeLabels[format.format_type] || format.format_type;
+        
+        // 分辨率显示
+        const resolution = format.resolution || 'N/A';
+        
+        // 视频编码显示
+        const vcodec = format.vcodec && format.vcodec !== 'none' ? format.vcodec : 'N/A';
+        
+        // 音频编码显示
+        const acodec = format.acodec && format.acodec !== 'none' ? format.acodec : 'N/A';
+        
         row.innerHTML = `
-            <td><input type="checkbox" name="subtitleFormat" value="${format.format_id}"
-                   onchange="selectFormat('subtitle', '${format.format_id}', this.checked)"></td>
+            <td><input type="checkbox" name="formatSelection" value="${format.format_id}" data-type="${format.format_type}"
+                   onchange="selectFormat('${format.format_type}', '${format.format_id}', this.checked)"></td>
+            <td><span class="format-type-badge type-${format.format_type}">${typeLabel}</span></td>
             <td><code>${format.format_id}</code></td>
             <td><strong>${format.ext.toUpperCase()}</strong></td>
-            <td>${format.language || '未知'}</td>
-            <td>${format.note || ''}</td>
+            <td>${resolution}</td>
+            <td><small>${vcodec}</small></td>
+            <td><small>${acodec}</small></td>
+            <td>${fileSize}</td>
+            <td>${bitrate}</td>
         `;
         
         tableBody.appendChild(row);
@@ -294,27 +264,18 @@ function displaySubtitleFormats(subtitleFormats) {
 }
 
 /**
- * 选择特定格式
+ * 选择特定格式（支持多选）
  */
 function selectFormat(type, formatId, isChecked = true) {
-    if (type === 'video' || type === 'audio') {
-        selectedFormats[type] = isChecked ? formatId : null;
-        
-        // 如果是单选按钮，需要更新UI
-        if (type === 'video') {
-            document.querySelectorAll(`input[name="videoFormat"]`).forEach(radio => {
-                radio.checked = radio.value === formatId;
-            });
-        } else if (type === 'audio') {
-            document.querySelectorAll(`input[name="audioFormat"]`).forEach(radio => {
-                radio.checked = radio.value === formatId;
-            });
-        }
-    } else if (type === 'subtitle') {
+    if (type === 'video' || type === 'audio' || type === 'combined' || type === 'subtitle') {
         if (isChecked) {
-            selectedFormats.subtitle = formatId;
+            // 添加到选择列表
+            if (!selectedFormats[type].includes(formatId)) {
+                selectedFormats[type].push(formatId);
+            }
         } else {
-            selectedFormats.subtitle = null;
+            // 从选择列表移除
+            selectedFormats[type] = selectedFormats[type].filter(id => id !== formatId);
         }
     }
 }
@@ -361,7 +322,7 @@ async function startDownload() {
         
         // 更新界面状态
         updateProgress(0, '任务已排队');
-        updateStatus('下载任务已开始，请等待...');
+        updateStatus('下载任务已开始，请等待...', false);
         
     } catch (error) {
         showError('启动下载失败: ' + error.message);
@@ -398,20 +359,27 @@ function collectDownloadParams() {
         }
         params.formats = currentFormats.best_default;
     } else if (mode === 'custom') {
-        // 验证是否选择了必要的格式
-        if (!selectedFormats.video) {
-            showError('请选择视频格式');
-            return null;
-        }
-        if (!selectedFormats.audio) {
-            showError('请选择音频格式');
+        // 收集所有选中的格式
+        const allSelected = [
+            ...selectedFormats.video,
+            ...selectedFormats.audio,
+            ...selectedFormats.combined,
+            ...selectedFormats.subtitle
+        ];
+        
+        // 验证是否选择了至少一个格式
+        if (allSelected.length === 0) {
+            showError('请至少选择一个格式');
             return null;
         }
         
         params.formats = {
+            selected: allSelected,
             video: selectedFormats.video,
             audio: selectedFormats.audio,
-            subtitle: selectedFormats.subtitle || null
+            combined: selectedFormats.combined,
+            subtitle: selectedFormats.subtitle,
+            has_separate_streams: currentFormats.has_separate_streams
         };
     }
     
@@ -447,7 +415,7 @@ function startPolling(taskId) {
                     // 下载完成
                     clearInterval(pollInterval);
                     updateProgress(100, '下载完成');
-                    updateStatus('下载完成！', true, data.download_url);
+                    updateStatus('下载完成！', true);
                     
                     // 恢复下载按钮
                     document.getElementById('downloadBtn').disabled = false;
@@ -494,7 +462,7 @@ function cancelDownload() {
         
         // 更新界面状态
         updateProgress(0, '已取消');
-        updateStatus('下载已取消');
+        updateStatus('下载已取消', false);
         
         // 恢复下载按钮
         document.getElementById('downloadBtn').disabled = false;
@@ -530,21 +498,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * 显示指定标签页
- */
-function showTab(tabName) {
-    // 更新激活的标签
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.classList.toggle('active', tab.getAttribute('data-tab') === tabName);
-    });
-    
-    // 更新激活的表格
-    document.querySelectorAll('.format-table').forEach(table => {
-        table.classList.toggle('active', table.id === tabName + 'Table');
-    });
-}
-
-/**
  * 切换下载模式
  */
 function toggleMode() {
@@ -568,12 +521,10 @@ function clearForm() {
     document.getElementById('clearBtn').style.display = 'none';
     
     // 清空格式表格
-    ['videoTableBody', 'audioTableBody', 'subtitleTableBody'].forEach(id => {
-        document.getElementById(id).innerHTML = '';
-    });
+    document.getElementById('formatsTableBody').innerHTML = '';
     
     // 清空选择
-    selectedFormats = { video: null, audio: null, subtitle: null };
+    selectedFormats = { video: [], audio: [], combined: [], subtitle: [] };
     
     // 清空进度和状态
     updateProgress(0, '');
