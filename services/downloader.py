@@ -480,7 +480,15 @@ class YouTubeDownloader:
             mode = params.get("mode", "default")
             filename = params.get("filename")
             container = params.get("container")
+            output_path = params.get("output_path")
             formats = params.get("formats", {})
+
+            # 确定下载目录
+            if output_path:
+                download_dir = Path(output_path)
+                download_dir.mkdir(exist_ok=True)
+            else:
+                download_dir = self.downloads_dir
 
             if not url:
                 return False, "缺少URL参数", None
@@ -489,7 +497,7 @@ class YouTubeDownloader:
             ydl_opts = self.base_opts.copy()
             ydl_opts.update(
                 {
-                    "outtmpl": str(self.downloads_dir / "%(title)s [%(id)s].%(ext)s"),
+                    "outtmpl": str(download_dir / "%(title)s [%(id)s].%(ext)s"),
                     "progress_hooks": [progress_callback] if progress_callback else [],
                     "merge_output_format": container if container else None,
                 }
@@ -500,11 +508,9 @@ class YouTubeDownloader:
                 # 清理文件名，移除非法字符
                 safe_filename = sanitize_filename(filename)
                 # 检查文件是否已存在，如果存在则添加数字后缀
-                safe_filename = self._get_unique_filename(safe_filename)
+                safe_filename = self._get_unique_filename(safe_filename, download_dir)
                 # 保留扩展名空间
-                ydl_opts["outtmpl"] = str(
-                    self.downloads_dir / f"{safe_filename}.%(ext)s"
-                )
+                ydl_opts["outtmpl"] = str(download_dir / f"{safe_filename}.%(ext)s")
             else:
                 # 没有自定义文件名时，使用 yt-dlp 的默认模板
                 # 但为了支持自动重命名，我们需要先获取视频信息
@@ -584,11 +590,11 @@ class YouTubeDownloader:
                     # 提取基础文件名（不含扩展名）
                     base_name = Path(default_filename).stem
                     # 获取唯一文件名
-                    unique_base = self._get_unique_filename(base_name)
+                    unique_base = self._get_unique_filename(base_name, download_dir)
                     # 如果文件名已改变，更新输出模板
                     if unique_base != base_name:
                         ydl_opts["outtmpl"] = str(
-                            self.downloads_dir / f"{unique_base}.%(ext)s"
+                            download_dir / f"{unique_base}.%(ext)s"
                         )
                         # 重新创建 YoutubeDL 实例以应用新的模板
                         ydl = YoutubeDL(ydl_opts)
@@ -640,23 +646,29 @@ class YouTubeDownloader:
             return filepath
         return None
 
-    def _get_unique_filename(self, base_filename: str) -> str:
+    def _get_unique_filename(
+        self, base_filename: str, download_dir: Path = None
+    ) -> str:
         """
         生成唯一的文件名，避免覆盖已存在的文件
 
         Args:
             base_filename: 基础文件名（不含扩展名）
+            download_dir: 下载目录，默认为 self.downloads_dir
 
         Returns:
             唯一的文件名（不含扩展名）
         """
         import fnmatch
 
+        # 使用指定的下载目录或默认目录
+        target_dir = download_dir if download_dir else self.downloads_dir
+
         # 获取下载目录中的所有文件
-        if not self.downloads_dir.exists():
+        if not target_dir.exists():
             return base_filename
 
-        existing_files = list(self.downloads_dir.iterdir())
+        existing_files = list(target_dir.iterdir())
         existing_names = {f.stem for f in existing_files if f.is_file()}
 
         # 检查基础文件名是否已存在

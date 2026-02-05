@@ -72,10 +72,11 @@
             transition: border-color 0.3s;
         }
         
-        input[type="text"]:focus,
-        input[type="url"]:focus,
-        select:focus {
-            outline: none;
+        input[type="text"]:focus-visible,
+        input[type="url"]:focus-visible,
+        select:focus-visible {
+            outline: 2px solid #3498db;
+            outline-offset: 2px;
             border-color: #3498db;
             box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
@@ -166,6 +167,8 @@
             background: #f8f9fa;
             border-radius: 4px 4px 0 0;
             margin-right: 5px;
+            font-family: inherit;
+            font-size: inherit;
         }
         
         .tab.active {
@@ -330,14 +333,17 @@
                 <input type="url"
                        id="urlInput"
                        placeholder="粘贴视频URL (例如: https://www.youtube.com/watch?v=ZEjLaSf4cCA)"
-                       value="https://www.youtube.com/watch?v=ZEjLaSf4cCA">
+                       value="https://www.youtube.com/watch?v=ZEjLaSf4cCA"
+                       autocomplete="url"
+                       inputmode="url"
+                       spellcheck="false">
                 <button id="parseBtn" onclick="parseUrl()">解析格式</button>
                 <button id="clearBtn" class="btn-danger" onclick="clearForm()" style="display: none;">清空</button>
             </div>
             <!-- 加载指示器 -->
             <div class="loading" id="loading" style="display: none; margin-top: 15px;">
                 <div class="loading-spinner"></div>
-                <p id="loadingText">正在处理...</p>
+                <p id="loadingText">正在处理…</p>
             </div>
             
             <!-- 错误消息 -->
@@ -360,7 +366,7 @@
                     <input type="radio" id="modeDefault" name="downloadMode" value="default" onchange="toggleMode()">
                     <label for="modeDefault">
                         <strong>默认最佳质量</strong><br>
-                        <small>自动选择最佳画质和音质 (yt-dlp默认)</small>
+                        <small>自动选择最佳画质和音质 (yt-dlp默认…)</small>
                     </label>
                 </div>
                 <div class="mode-option">
@@ -412,7 +418,11 @@
                 </div>
                 <div class="option-group">
                     <label for="outputPath">下载路径</label>
-                    <input type="text" id="outputPath" value="downloads/" readonly>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="outputPath" value="downloads/" readonly style="flex: 1;">
+                        <button type="button" onclick="browseFolder()" style="padding: 10px 16px; font-size: 14px;">浏览...</button>
+                        <button type="button" onclick="setQuickFolder('desktop')" style="padding: 10px 16px; font-size: 14px; background: #95a5a6;">桌面</button>
+                    </div>
                 </div>
                 <div class="option-group">
                     <label for="containerFormat">容器格式</label>

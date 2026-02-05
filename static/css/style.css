@@ -24,6 +24,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    touch-action: manipulation;
 }
 
 body {
@@ -116,7 +117,7 @@ textarea {
     border: 2px solid var(--border-color);
     border-radius: 6px;
     font-size: 14px;
-    transition: all 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s;
     background: white;
 }
 
@@ -140,7 +141,7 @@ button {
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -214,7 +215,7 @@ button:disabled {
     border: 2px solid var(--border-color);
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
     flex: 1;
     min-width: 250px;
 }
@@ -272,7 +273,7 @@ button:disabled {
     border-radius: 8px 8px 0 0;
     font-weight: 600;
     color: var(--dark-gray);
-    transition: all 0.3s;
+    transition: color 0.3s, background-color 0.3s, border-color 0.3s;
     position: relative;
     bottom: -2px;
 }
@@ -320,7 +321,7 @@ button:disabled {
 }
 
 .format-table tr {
-    transition: background 0.2s;
+    transition: background-color 0.2s;
 }
 
 .format-table tr:hover {
@@ -587,6 +588,26 @@ input[type="checkbox"] {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
     20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .loading-spinner {
+        animation: none;
+        border-top-color: var(--primary-color);
+    }
+    
+    .progress-fill::after {
+        animation: none;
+    }
 }
 
 /* 响应式设计 */

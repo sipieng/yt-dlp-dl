@@ -27,7 +27,7 @@ function showError(message) {
 /**
  * 显示加载指示器
  */
-function showLoading(text = '正在处理...') {
+function showLoading(text = '正在处理…') {
     const loadingDiv = document.getElementById('loading');
     document.getElementById('loadingText').textContent = text;
     loadingDiv.style.display = 'block';
@@ -84,11 +84,15 @@ function updateStatus(message, showOpenFolder = false) {
  */
 async function openDownloadFolder() {
     try {
+        // 获取当前选择的下载路径
+        const outputPath = document.getElementById('outputPath').value.trim() || 'downloads/';
+        
         const response = await fetch('/api/open-folder', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({ path: outputPath })
         });
         
         if (!response.ok) {
@@ -118,7 +122,7 @@ async function parseUrl() {
     
     try {
         // 显示加载状态
-        showLoading('正在解析视频信息...');
+        showLoading('正在解析视频信息…');
         const parseBtn = document.getElementById('parseBtn');
         parseBtn.disabled = true;
         
@@ -359,7 +363,7 @@ async function startDownload() {
         cancelBtn.style.display = 'inline-block';
         
         // 显示加载状态
-        showLoading('正在准备下载...');
+        showLoading('正在准备下载…');
         
         // 调用下载API
         const response = await fetch('/api/download', {
@@ -382,7 +386,7 @@ async function startDownload() {
         
         // 更新界面状态
         updateProgress(0, '任务已排队');
-        updateStatus('下载任务已开始，请等待...', false);
+        updateStatus('下载任务已开始，请等待…', false);
         
     } catch (error) {
         showError('启动下载失败: ' + error.message);
@@ -397,18 +401,76 @@ async function startDownload() {
 }
 
 /**
+ * 浏览选择文件夹
+ */
+async function browseFolder() {
+    try {
+        const response = await fetch('/api/select-folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || '选择文件夹失败');
+        }
+        
+        if (data.success && data.path) {
+            document.getElementById('outputPath').value = data.path;
+        }
+        // 如果用户取消选择，不做任何操作，保持原路径
+    } catch (error) {
+        showError('选择文件夹失败: ' + error.message);
+        console.error('选择文件夹时出错:', error);
+    }
+}
+
+/**
+ * 设置常用文件夹快捷路径
+ */
+async function setQuickFolder(folderType) {
+    try {
+        const response = await fetch('/api/quick-folder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ folder_type: folderType })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || '获取文件夹路径失败');
+        }
+        
+        if (data.success && data.path) {
+            document.getElementById('outputPath').value = data.path;
+        }
+    } catch (error) {
+        showError('设置文件夹失败: ' + error.message);
+        console.error('设置快捷文件夹时出错:', error);
+    }
+}
+
+/**
  * 收集下载参数
  */
 function collectDownloadParams() {
     const mode = document.querySelector('input[name="downloadMode"]:checked').value;
     const filename = document.getElementById('filename').value.trim();
     const containerFormat = document.getElementById('containerFormat').value;
+    const outputPath = document.getElementById('outputPath').value.trim();
     
     const params = {
         url: document.getElementById('urlInput').value.trim(),
         mode: mode,
         filename: filename || null,
-        container: containerFormat || null
+        container: containerFormat || null,
+        output_path: outputPath || null
     };
     
     // 根据模式添加不同的参数
@@ -555,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearBtn.style.display = 'inline-block';
     }
     
-    urlInput.addEventListener('keypress', function(event) {
+    urlInput.addEventListener('keydown', function(event) {
         if (event.key === 'Enter') {
             parseUrl();
         }
