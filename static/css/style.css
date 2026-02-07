@@ -461,6 +461,22 @@ input[type="checkbox"] {
     display: block;
 }
 
+/* 下载链接（当前页面未使用，但保留供后续使用） */
+.download-link {
+    display: inline-block;
+    background: var(--secondary-color);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    margin-top: 10px;
+    display: none;
+}
+
+.download-link.show {
+    display: inline-block;
+}
+
 /* 打开文件夹按钮 */
 #openFolderBtn {
     display: none;
