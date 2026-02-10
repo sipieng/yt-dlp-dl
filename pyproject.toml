@@ -10,3 +10,20 @@ dependencies = [
     "uv>=0.9.28",
     "yt-dlp>=2025.12.8",
 ]
+
+[[tool.uv.index]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+[[tool.uv.index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+
+[[tool.uv.index]]
+name = "baidu"
+url = "https://mirror.baidu.com/pypi/simple/"
+
+[[tool.uv.index]]
+name = "ustc"
+url = "https://pypi.mirrors.ustc.edu.cn/simple/"
