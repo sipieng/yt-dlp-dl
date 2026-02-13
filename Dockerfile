@@ -12,7 +12,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY pyproject.toml uv.lock ./
 
 # 设置国内镜像源（可选，uv 默认会使用）
-ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
+# ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
 
 # 安装依赖到 .venv
 RUN uv sync --frozen --no-dev
@@ -43,8 +43,11 @@ ENV PATH="/app/.venv/bin:$PATH"
 # 复制应用代码
 COPY --chown=appuser:appuser . .
 
-# 创建下载目录
-RUN mkdir -p /app/downloads && chown appuser:appuser /app/downloads
+# 创建下载目录且确保权限正确
+RUN mkdir -p /app/downloads && chown -R appuser:appuser /app/downloads
+
+# 如果你的 run.py 需要执行权限
+RUN chmod +x /app/run.py
 
 # 切换到非 root 用户
 USER appuser

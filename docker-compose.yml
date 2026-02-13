@@ -6,7 +6,7 @@ services:
     image: yt-dlp-web-ui:latest
     container_name: yt-dlp-dl
     ports:
-      - "${PORT:-5000}:${PORT:-5000}"
+      - "${PORT:-5000}:5000"
     volumes:
       # 挂载下载目录到宿主机（可选：改为你的实际路径）
       - ./downloads:/app/downloads
