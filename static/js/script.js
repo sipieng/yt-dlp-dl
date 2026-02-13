@@ -65,13 +65,24 @@ function updateProgress(percent, message = '') {
  * 更新状态消息
  */
 function updateStatus(message, showOpenFolder = false) {
+    // Docker 环境下不执行此函数
+    if (window.isDocker) return;
+
     const statusDiv = document.getElementById('statusMessage');
     const statusContent = document.getElementById('statusContent');
     const openFolderBtn = document.getElementById('openFolderBtn');
-    
+
+    if (!statusDiv || !statusContent || !openFolderBtn) return;
+
     statusContent.textContent = message;
-    statusDiv.classList.add('show');
-    
+
+    // 如果消息为空，隐藏整个状态区域
+    if (!message) {
+        statusDiv.classList.remove('show');
+    } else {
+        statusDiv.classList.add('show');
+    }
+
     if (showOpenFolder) {
         openFolderBtn.classList.add('show');
     } else {
@@ -80,13 +91,44 @@ function updateStatus(message, showOpenFolder = false) {
 }
 
 /**
- * 打开下载文件夹
+ * 显示下载链接（Docker 环境）
+ */
+function showDownloadLink(downloadUrl, filename) {
+    const container = document.getElementById('downloadLinkContainer');
+    const content = document.getElementById('downloadLinkContent');
+
+    if (!container || !content) return;
+
+    content.innerHTML = `
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="${downloadUrl}" download="${filename}" style="padding: 10px 20px; background: #27ae60; color: white; text-decoration: none; border-radius: 4px; display: inline-block;">
+                ⬇️ 保存文件
+            </a>
+            <span style="color: #7f8c8d; font-size: 14px;">${filename}</span>
+        </div>
+    `;
+
+    container.style.display = 'block';
+}
+
+/**
+ * 隐藏下载链接（Docker 环境）
+ */
+function hideDownloadLink() {
+    const container = document.getElementById('downloadLinkContainer');
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * 打开下载文件夹（本地）/ 显示下载文件列表（Docker）
  */
 async function openDownloadFolder() {
     try {
         // 获取当前选择的下载路径
         const outputPath = document.getElementById('outputPath').value.trim() || 'downloads/';
-        
+
         const response = await fetch('/api/open-folder', {
             method: 'POST',
             headers: {
@@ -94,15 +136,134 @@ async function openDownloadFolder() {
             },
             body: JSON.stringify({ path: outputPath })
         });
-        
+
         if (!response.ok) {
             const data = await response.json();
             throw new Error(data.error || '无法打开文件夹');
         }
+
+        const data = await response.json();
+
+        // Docker 环境：显示下载文件列表
+        if (data.is_docker) {
+            showDownloadFilesList(data.files, data.folder_path);
+        }
+        // 本地环境：后端已经打开系统文件夹
     } catch (error) {
         showError('打开文件夹失败: ' + error.message);
         console.error('打开文件夹时出错:', error);
     }
+}
+
+/**
+ * 显示下载文件列表（Docker 环境）
+ */
+function showDownloadFilesList(files, folderPath) {
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    `;
+
+    // 创建内容区域
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    // 标题
+    const title = document.createElement('h3');
+    title.textContent = '下载文件列表';
+    title.style.marginBottom = '15px';
+
+    // 路径显示
+    const pathInfo = document.createElement('p');
+    pathInfo.style.cssText = 'margin-bottom: 10px; color: #7f8c8d; font-size: 14px;';
+    pathInfo.textContent = `路径: ${folderPath}`;
+
+    // 文件列表
+    const list = document.createElement('div');
+    list.style.cssText = 'flex: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 15px;';
+
+    if (files.length === 0) {
+        list.innerHTML = '<div style="padding: 20px; text-align: center; color: #7f8c8d;">暂无下载文件</div>';
+    } else {
+        files.forEach(file => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee;';
+
+            const fileInfo = document.createElement('div');
+            fileInfo.style.cssText = 'flex: 1;';
+
+            const fileName = document.createElement('div');
+            fileName.textContent = file.name;
+            fileName.style.cssText = 'font-weight: 500; margin-bottom: 5px; word-break: break-all;';
+
+            const fileSize = document.createElement('div');
+            fileSize.textContent = formatFileSize(file.size);
+            fileSize.style.cssText = 'font-size: 12px; color: #7f8c8d;';
+
+            fileInfo.appendChild(fileName);
+            fileInfo.appendChild(fileSize);
+
+            const downloadBtn = document.createElement('a');
+            downloadBtn.textContent = '下载';
+            downloadBtn.href = file.download_url;
+            downloadBtn.style.cssText = 'padding: 6px 12px; background: #3498db; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; white-space: nowrap;';
+
+            item.appendChild(fileInfo);
+            item.appendChild(downloadBtn);
+            list.appendChild(item);
+        });
+    }
+
+    // 关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '关闭';
+    closeBtn.style.cssText = 'padding: 8px 16px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; align-self: flex-end;';
+    closeBtn.onclick = () => document.body.removeChild(modal);
+
+    content.appendChild(title);
+    content.appendChild(pathInfo);
+    content.appendChild(list);
+    content.appendChild(closeBtn);
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+
+    // 点击背景关闭
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
+}
+
+/**
+ * 格式化文件大小
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
 /**
@@ -111,21 +272,24 @@ async function openDownloadFolder() {
 async function parseUrl() {
     const urlInput = document.getElementById('urlInput');
     const url = urlInput.value.trim();
-    
+
     if (!url) {
         showError('请输入有效的视频URL');
         return;
     }
-    
+
     // 清空之前的解析结果，避免误导
     clearPreviousResult();
-    
+
+    // 隐藏之前的下载链接（Docker 环境）
+    hideDownloadLink();
+
     try {
         // 显示加载状态
         showLoading('正在解析视频信息…');
         const parseBtn = document.getElementById('parseBtn');
         parseBtn.disabled = true;
-        
+
         // 调用后端API
         const response = await fetch('/api/parse', {
             method: 'POST',
@@ -134,17 +298,17 @@ async function parseUrl() {
             },
             body: JSON.stringify({ url: url })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || '解析失败');
         }
-        
+
         // 处理返回的数据
         displayVideoInfo(data);
         displayFormats(data.formats);
-        
+
         // 显示视频信息区域
         document.getElementById('videoInfo').classList.add('show');
         document.getElementById('downloadBtn').disabled = false;
@@ -158,7 +322,7 @@ async function parseUrl() {
 
         // 存储格式数据供后续使用
         currentFormats = data;
-        
+
         // 重置选择状态
         selectedFormats = {
             video: [],
@@ -166,14 +330,14 @@ async function parseUrl() {
             combined: [],
             subtitle: []
         };
-        
+
         // 清除之前的任务状态
         currentTaskId = null;
         if (pollInterval) {
             clearInterval(pollInterval);
             pollInterval = null;
         }
-        
+
     } catch (error) {
         // 清空旧结果，但保留错误消息显示
         clearPreviousResultKeepError();
@@ -350,21 +514,24 @@ function selectFormat(type, formatId, isChecked = true) {
 async function startDownload() {
     // 收集下载参数
     const params = collectDownloadParams();
-    
+
     if (!params) {
         return; // 参数验证失败
     }
-    
+
     try {
         // 禁用下载按钮
         const downloadBtn = document.getElementById('downloadBtn');
         const cancelBtn = document.getElementById('cancelBtn');
         downloadBtn.disabled = true;
         cancelBtn.style.display = 'inline-block';
-        
+
+        // 隐藏之前的下载链接（Docker 环境）
+        hideDownloadLink();
+
         // 显示加载状态
         showLoading('正在准备下载…');
-        
+
         // 调用下载API
         const response = await fetch('/api/download', {
             method: 'POST',
@@ -373,25 +540,25 @@ async function startDownload() {
             },
             body: JSON.stringify(params)
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || '下载启动失败');
         }
-        
+
         // 保存任务ID并开始轮询
         currentTaskId = data.task_id;
         startPolling(currentTaskId);
-        
+
         // 更新界面状态
         updateProgress(0, '任务已排队');
         updateStatus('下载任务已开始，请等待…', false);
-        
+
     } catch (error) {
         showError('启动下载失败: ' + error.message);
         console.error('启动下载时出错:', error);
-        
+
         // 重新启用下载按钮
         document.getElementById('downloadBtn').disabled = false;
         document.getElementById('cancelBtn').style.display = 'none';
@@ -401,7 +568,7 @@ async function startDownload() {
 }
 
 /**
- * 浏览选择文件夹
+ * 浏览选择文件夹（本地）/ 显示提示（Docker）
  */
 async function browseFolder() {
     try {
@@ -411,15 +578,22 @@ async function browseFolder() {
                 'Content-Type': 'application/json',
             }
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || '选择文件夹失败');
         }
-        
+
         if (data.success && data.path) {
             document.getElementById('outputPath').value = data.path;
+            // Docker 环境：显示提示信息
+            if (data.is_docker) {
+                updateStatus('Docker 环境使用固定下载路径: ' + data.path, false);
+                setTimeout(() => {
+                    document.getElementById('statusMessage').classList.remove('show');
+                }, 3000);
+            }
         }
         // 如果用户取消选择，不做任何操作，保持原路径
     } catch (error) {
@@ -429,7 +603,7 @@ async function browseFolder() {
 }
 
 /**
- * 设置常用文件夹快捷路径
+ * 设置常用文件夹快捷路径（本地）/ 显示提示（Docker）
  */
 async function setQuickFolder(folderType) {
     try {
@@ -440,15 +614,22 @@ async function setQuickFolder(folderType) {
             },
             body: JSON.stringify({ folder_type: folderType })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || '获取文件夹路径失败');
         }
-        
+
         if (data.success && data.path) {
             document.getElementById('outputPath').value = data.path;
+            // Docker 环境：显示提示信息
+            if (data.is_docker) {
+                updateStatus('Docker 环境使用固定下载路径', false);
+                setTimeout(() => {
+                    document.getElementById('statusMessage').classList.remove('show');
+                }, 3000);
+            }
         }
     } catch (error) {
         showError('设置文件夹失败: ' + error.message);
@@ -537,8 +718,14 @@ function startPolling(taskId) {
                     // 下载完成
                     clearInterval(pollInterval);
                     updateProgress(100, '下载完成');
-                    updateStatus('下载完成！', true);
-                    
+                    // Docker 环境不显示状态消息，只显示下载链接
+                    updateStatus(window.isDocker ? '' : '下载完成！', !window.isDocker);
+
+                    // Docker 环境：显示下载链接
+                    if (data.download_url && data.filename) {
+                        showDownloadLink(data.download_url, data.filename);
+                    }
+
                     // 恢复下载按钮
                     document.getElementById('downloadBtn').disabled = false;
                     document.getElementById('cancelBtn').style.display = 'none';

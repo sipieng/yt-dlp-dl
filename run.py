@@ -18,6 +18,14 @@ def main():
     print("yt-dlp Web UI 启动器")
     print("=" * 60)
 
+    # 检查是否运行在 Docker 环境中
+    is_docker = os.environ.get("IS_DOCKER", "false").lower() in ("true", "1", "yes")
+    if is_docker:
+        print("📦 Docker 环境")
+
+    # 从环境变量读取端口配置
+    port = int(os.environ.get("PORT", "5000"))
+
     # 检查依赖
     try:
         from app import app, downloader
@@ -35,27 +43,29 @@ def main():
 
     # 提示用户
     print("\n启动信息:")
-    print("  • Flask服务器将运行在: http://127.0.0.1:5000")
+    print(f"  • Flask服务器将运行在: http://0.0.0.0:{port}")
     print("  • 按 Ctrl+C 停止服务器")
     print("  • 测试URL: https://www.youtube.com/watch?v=ZEjLaSf4cCA")
     print("\n" + "=" * 60)
 
-    # 尝试自动打开浏览器
-    def open_browser():
-        time.sleep(2)  # 等待服务器启动
-        try:
-            webbrowser.open("http://127.0.0.1:5000")
-            print("✅ 已尝试在浏览器中打开Web界面")
-        except:
-            print("⚠️  无法自动打开浏览器，请手动访问: http://127.0.0.1:5000")
+    # Docker 环境下不自动打开浏览器
+    if not is_docker:
+        # 尝试自动打开浏览器
+        def open_browser():
+            time.sleep(2)  # 等待服务器启动
+            try:
+                webbrowser.open(f"http://127.0.0.1:{port}")
+                print("✅ 已尝试在浏览器中打开Web界面")
+            except:
+                print(f"⚠️  无法自动打开浏览器，请手动访问: http://127.0.0.1:{port}")
 
-    # 启动浏览器线程
-    browser_thread = threading.Thread(target=open_browser, daemon=True)
-    browser_thread.start()
+        # 启动浏览器线程
+        browser_thread = threading.Thread(target=open_browser, daemon=True)
+        browser_thread.start()
 
-    # 运行Flask应用
+    # 运行Flask应用（Docker 环境下禁用 debug 模式）
     try:
-        app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
+        app.run(debug=not is_docker, host="0.0.0.0", port=port, use_reloader=False)
     except KeyboardInterrupt:
         print("\n\n服务器已停止")
     except Exception as e:

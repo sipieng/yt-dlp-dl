@@ -13,6 +13,9 @@ from flask import Flask, render_template, request, jsonify, send_file, url_for
 # 导入下载器服务
 from services.downloader import YouTubeDownloader
 
+# 判断是否运行在 Docker 环境中
+IS_DOCKER = os.environ.get("IS_DOCKER", "false").lower() in ("true", "1", "yes")
+
 # 创建Flask应用
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.urandom(24).hex()
@@ -42,7 +45,7 @@ def create_app():
 @app.route("/")
 def index():
     """渲染主页面"""
-    return render_template("index.html")
+    return render_template("index.html", is_docker=IS_DOCKER)
 
 
 @app.route("/api/parse", methods=["POST"])
@@ -291,39 +294,79 @@ def health_check():
 
 @app.route("/api/open-folder", methods=["POST"])
 def open_download_folder():
-    """打开下载文件夹"""
+    """打开下载文件夹（本地）/ 返回下载文件列表（Docker）"""
     try:
-        import subprocess
-        import platform
-        import os
-        from pathlib import Path
+        # Docker 环境：返回下载文件列表
+        if IS_DOCKER:
+            data = request.get_json() or {}
+            folder_path = data.get("path") or str(downloader.downloads_dir)
 
-        # 获取请求中的路径参数
-        data = request.get_json() or {}
-        folder_path = data.get("path")
+            # 验证路径是否存在
+            path_obj = Path(folder_path)
+            if not path_obj.exists():
+                return jsonify({"error": "文件夹不存在"}), 404
 
-        # 如果没有提供路径，使用默认的下载目录
-        if not folder_path:
-            folder_path = str(downloader.downloads_dir)
+            # 获取下载目录中的文件列表
+            files = []
+            for item in path_obj.iterdir():
+                if item.is_file():
+                    # 获取文件信息
+                    stat = item.stat()
+                    files.append(
+                        {
+                            "name": item.name,
+                            "size": stat.st_size,
+                            "modified": stat.st_mtime,
+                            "download_url": url_for(
+                                "download_file", filename=item.name, _external=True
+                            ),
+                        }
+                    )
 
-        # 验证路径是否存在
-        path_obj = Path(folder_path)
-        if not path_obj.exists():
-            return jsonify({"error": "文件夹不存在"}), 404
+            # 按修改时间倒序排序
+            files.sort(key=lambda x: x["modified"], reverse=True)
 
-        # 转换为绝对路径
-        folder_path = os.path.abspath(folder_path)
-        system = platform.system()
+            return jsonify(
+                {
+                    "success": True,
+                    "is_docker": True,
+                    "folder_path": folder_path,
+                    "files": files,
+                }
+            )
+        else:
+            # 本地环境：打开系统文件夹
+            import subprocess
+            import platform
+            import os
 
-        if system == "Windows":
-            # Windows: 使用 explorer 命令，不检查返回值（因为 explorer 可能返回非零值）
-            subprocess.Popen(["explorer", folder_path])
-        elif system == "Darwin":  # macOS
-            subprocess.Popen(["open", folder_path])
-        else:  # Linux
-            subprocess.Popen(["xdg-open", folder_path])
+            data = request.get_json() or {}
+            folder_path = data.get("path")
 
-        return jsonify({"success": True, "message": "文件夹已打开"})
+            # 如果没有提供路径，使用默认的下载目录
+            if not folder_path:
+                folder_path = str(downloader.downloads_dir)
+
+            # 验证路径是否存在
+            path_obj = Path(folder_path)
+            if not path_obj.exists():
+                return jsonify({"error": "文件夹不存在"}), 404
+
+            # 转换为绝对路径
+            folder_path = os.path.abspath(folder_path)
+            system = platform.system()
+
+            if system == "Windows":
+                # Windows: 使用 explorer 命令，不检查返回值（因为 explorer 可能返回非零值）
+                subprocess.Popen(["explorer", folder_path])
+            elif system == "Darwin":  # macOS
+                subprocess.Popen(["open", folder_path])
+            else:  # Linux
+                subprocess.Popen(["xdg-open", folder_path])
+
+            return jsonify(
+                {"success": True, "is_docker": False, "message": "文件夹已打开"}
+            )
     except Exception as e:
         app.logger.error(f"打开文件夹时出错: {str(e)}")
         return jsonify({"error": f"无法打开文件夹: {str(e)}"}), 500
@@ -331,20 +374,33 @@ def open_download_folder():
 
 @app.route("/api/select-folder", methods=["POST"])
 def select_folder():
-    """打开系统文件夹选择对话框"""
+    """打开系统文件夹选择对话框（本地）/ 返回固定路径（Docker）"""
     try:
-        import subprocess
-        import platform
-        import os
-        import tempfile
-        import json
+        # Docker 环境：返回固定下载路径
+        if IS_DOCKER:
+            # Docker 环境下，用户无法选择文件夹，返回固定路径
+            default_path = str(downloader.downloads_dir)
+            return jsonify(
+                {
+                    "success": True,
+                    "is_docker": True,
+                    "path": default_path,
+                    "message": "Docker 环境使用固定下载路径",
+                }
+            )
+        else:
+            # 本地环境：打开系统文件夹选择对话框
+            import subprocess
+            import platform
+            import os
+            import tempfile
 
-        system = platform.system()
-        selected_path = None
+            system = platform.system()
+            selected_path = None
 
-        if system == "Windows":
-            # Windows: 使用 PowerShell 的 FolderBrowserDialog
-            ps_script = """
+            if system == "Windows":
+                # Windows: 使用 PowerShell 的 FolderBrowserDialog
+                ps_script = """
 Add-Type -AssemblyName System.Windows.Forms
 $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
 $dialog.Description = "选择下载文件夹"
@@ -353,61 +409,59 @@ if ($dialog.ShowDialog() -eq "OK") {
     Write-Output $dialog.SelectedPath
 }
 """
-            # 创建临时脚本文件
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".ps1", delete=False
-            ) as f:
-                f.write(ps_script)
-                script_path = f.name
+                # 创建临时脚本文件
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".ps1", delete=False
+                ) as f:
+                    f.write(ps_script)
+                    script_path = f.name
 
-            try:
-                result = subprocess.run(
-                    ["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path],
-                    capture_output=True,
-                    text=True,
-                    timeout=60,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    selected_path = result.stdout.strip()
-            finally:
-                os.unlink(script_path)
+                try:
+                    result = subprocess.run(
+                        [
+                            "powershell",
+                            "-ExecutionPolicy",
+                            "Bypass",
+                            "-File",
+                            script_path,
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        selected_path = result.stdout.strip()
+                finally:
+                    os.unlink(script_path)
 
-        elif system == "Darwin":  # macOS
-            # macOS: 使用 AppleScript
-            script = """
+            elif system == "Darwin":  # macOS
+                # macOS: 使用 AppleScript
+                script = """
 tell application "System Events"
     activate
     set folderPath to choose folder with prompt "选择下载文件夹"
     return POSIX path of folderPath
 end tell
 """
-            result = subprocess.run(
-                ["osascript", "-e", script], capture_output=True, text=True, timeout=60
-            )
-            if result.returncode == 0:
-                selected_path = result.stdout.strip()
-
-        else:  # Linux
-            # Linux: 尝试使用 zenity 或 kdialog
-            try:
                 result = subprocess.run(
-                    [
-                        "zenity",
-                        "--file-selection",
-                        "--directory",
-                        "--title=选择下载文件夹",
-                    ],
+                    ["osascript", "-e", script],
                     capture_output=True,
                     text=True,
                     timeout=60,
                 )
                 if result.returncode == 0:
                     selected_path = result.stdout.strip()
-            except FileNotFoundError:
-                # 尝试 kdialog
+
+            else:  # Linux
+                # Linux: 尝试使用 zenity 或 kdialog
                 try:
                     result = subprocess.run(
-                        ["kdialog", "--getexistingdirectory", "."],
+                        [
+                            "zenity",
+                            "--file-selection",
+                            "--directory",
+                            "--title=选择下载文件夹",
+                        ],
                         capture_output=True,
                         text=True,
                         timeout=60,
@@ -415,14 +469,29 @@ end tell
                     if result.returncode == 0:
                         selected_path = result.stdout.strip()
                 except FileNotFoundError:
-                    return jsonify(
-                        {"error": "未找到文件夹选择工具，请安装 zenity 或 kdialog"}
-                    ), 500
+                    # 尝试 kdialog
+                    try:
+                        result = subprocess.run(
+                            ["kdialog", "--getexistingdirectory", "."],
+                            capture_output=True,
+                            text=True,
+                            timeout=60,
+                        )
+                        if result.returncode == 0:
+                            selected_path = result.stdout.strip()
+                    except FileNotFoundError:
+                        return jsonify(
+                            {"error": "未找到文件夹选择工具，请安装 zenity 或 kdialog"}
+                        ), 500
 
-        if selected_path:
-            return jsonify({"success": True, "path": selected_path})
-        else:
-            return jsonify({"success": False, "message": "用户取消选择"})
+            if selected_path:
+                return jsonify(
+                    {"success": True, "is_docker": False, "path": selected_path}
+                )
+            else:
+                return jsonify(
+                    {"success": False, "is_docker": False, "message": "用户取消选择"}
+                )
 
     except Exception as e:
         app.logger.error(f"选择文件夹时出错: {str(e)}")
@@ -431,61 +500,81 @@ end tell
 
 @app.route("/api/quick-folder", methods=["POST"])
 def get_quick_folder():
-    """获取常用文件夹路径"""
+    """获取常用文件夹路径（本地）/ 返回固定路径（Docker）"""
     try:
-        import platform
-        import os
-        from pathlib import Path
+        # Docker 环境：返回固定下载路径
+        if IS_DOCKER:
+            data = request.get_json()
+            if not data or "folder_type" not in data:
+                return jsonify({"error": "缺少文件夹类型参数"}), 400
 
-        data = request.get_json()
-        if not data or "folder_type" not in data:
-            return jsonify({"error": "缺少文件夹类型参数"}), 400
+            # Docker 环境下，所有快捷路径都指向固定下载目录
+            default_path = str(downloader.downloads_dir)
+            return jsonify(
+                {
+                    "success": True,
+                    "is_docker": True,
+                    "path": default_path,
+                    "message": "Docker 环境使用固定下载路径",
+                }
+            )
+        else:
+            # 本地环境：获取系统常用文件夹路径
+            import platform
+            import os
+            from pathlib import Path
 
-        folder_type = data["folder_type"]
-        system = platform.system()
-        folder_path = None
+            data = request.get_json()
+            if not data or "folder_type" not in data:
+                return jsonify({"error": "缺少文件夹类型参数"}), 400
 
-        if system == "Windows":
-            # Windows: 使用环境变量和已知路径
-            user_profile = os.environ.get("USERPROFILE", "")
-            if folder_type == "desktop":
-                folder_path = os.path.join(user_profile, "Desktop")
-            elif folder_type == "downloads":
-                folder_path = os.path.join(user_profile, "Downloads")
+            folder_type = data["folder_type"]
+            system = platform.system()
+            folder_path = None
 
-        elif system == "Darwin":  # macOS
-            # macOS: 使用用户主目录下的标准文件夹
-            home = Path.home()
-            if folder_type == "desktop":
-                folder_path = str(home / "Desktop")
-            elif folder_type == "downloads":
-                folder_path = str(home / "Downloads")
+            if system == "Windows":
+                # Windows: 使用环境变量和已知路径
+                user_profile = os.environ.get("USERPROFILE", "")
+                if folder_type == "desktop":
+                    folder_path = os.path.join(user_profile, "Desktop")
+                elif folder_type == "downloads":
+                    folder_path = os.path.join(user_profile, "Downloads")
 
-        else:  # Linux
-            # Linux: 使用 XDG 标准路径或主目录
-            home = Path.home()
-            if folder_type == "desktop":
-                # 尝试 XDG_DESKTOP_DIR，否则使用默认
-                xdg_desktop = os.environ.get("XDG_DESKTOP_DIR", "")
-                if xdg_desktop:
-                    folder_path = xdg_desktop
-                else:
+            elif system == "Darwin":  # macOS
+                # macOS: 使用用户主目录下的标准文件夹
+                home = Path.home()
+                if folder_type == "desktop":
                     folder_path = str(home / "Desktop")
-            elif folder_type == "downloads":
-                # 尝试 XDG_DOWNLOAD_DIR，否则使用默认
-                xdg_downloads = os.environ.get("XDG_DOWNLOAD_DIR", "")
-                if xdg_downloads:
-                    folder_path = xdg_downloads
-                else:
+                elif folder_type == "downloads":
                     folder_path = str(home / "Downloads")
 
-        # 验证路径是否存在
-        if folder_path and os.path.exists(folder_path):
-            # 转换为绝对路径
-            folder_path = os.path.abspath(folder_path)
-            return jsonify({"success": True, "path": folder_path})
-        else:
-            return jsonify({"error": f"找不到{folder_type}文件夹"}), 404
+            else:  # Linux
+                # Linux: 使用 XDG 标准路径或主目录
+                home = Path.home()
+                if folder_type == "desktop":
+                    # 尝试 XDG_DESKTOP_DIR，否则使用默认
+                    xdg_desktop = os.environ.get("XDG_DESKTOP_DIR", "")
+                    if xdg_desktop:
+                        folder_path = xdg_desktop
+                    else:
+                        folder_path = str(home / "Desktop")
+                elif folder_type == "downloads":
+                    # 尝试 XDG_DOWNLOAD_DIR，否则使用默认
+                    xdg_downloads = os.environ.get("XDG_DOWNLOAD_DIR", "")
+                    if xdg_downloads:
+                        folder_path = xdg_downloads
+                    else:
+                        folder_path = str(home / "Downloads")
+
+            # 验证路径是否存在
+            if folder_path and os.path.exists(folder_path):
+                # 转换为绝对路径
+                folder_path = os.path.abspath(folder_path)
+                return jsonify(
+                    {"success": True, "is_docker": False, "path": folder_path}
+                )
+            else:
+                return jsonify({"error": f"找不到{folder_type}文件夹"}), 404
 
     except Exception as e:
         app.logger.error(f"获取快捷文件夹时出错: {str(e)}")

@@ -1,0 +1,31 @@
+services:
+  yt-dlp-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yt-dlp-web-ui:latest
+    container_name: yt-dlp-dl
+    ports:
+      - "${PORT:-5000}:${PORT:-5000}"
+    volumes:
+      # 挂载下载目录到宿主机（可选：改为你的实际路径）
+      - ./downloads:/app/downloads
+    environment:
+      # 标识运行在 Docker 环境中
+      - IS_DOCKER=true
+      # 设置时区（可选：根据需要修改）
+      - TZ=Asia/Shanghai
+      # Python 输出不缓冲
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# 可选：使用外部网络暴露服务
+# networks:
+#   default:
+#     name: yt-dlp-network

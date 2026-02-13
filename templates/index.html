@@ -109,8 +109,10 @@
                     <label for="outputPath">下载路径</label>
                     <div style="display: flex; gap: 10px;">
                         <input type="text" id="outputPath" value="downloads/" readonly style="flex: 1;">
+                        {% if not is_docker %}
                         <button type="button" onclick="browseFolder()" style="padding: 10px 16px; font-size: 14px;">浏览...</button>
                         <button type="button" onclick="setQuickFolder('desktop')" style="padding: 10px 16px; font-size: 14px; background: #95a5a6;">桌面</button>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="option-group">
@@ -152,14 +154,31 @@
                 <span id="progressMessage" style="margin-left: 10px; color: #7f8c8d;">准备中...</span>
             </div>
         </div>
-        
-        <!-- 状态消息 -->
+
+        <!-- 状态消息（本地环境） -->
+        {% if not is_docker %}
         <div class="status-message" id="statusMessage">
             <div id="statusContent"></div>
             <button id="openFolderBtn" class="btn btn-secondary" onclick="openDownloadFolder()">打开下载文件夹</button>
         </div>
+        {% endif %}
+
+        <!-- 下载链接显示区域（Docker 环境） -->
+        {% if is_docker %}
+        <div class="status-message" id="downloadLinkContainer" style="display: none;">
+            <h3>下载完成</h3>
+            <div id="downloadLinkContent" style="margin-top: 10px;">
+                <!-- 下载链接将动态插入这里 -->
+            </div>
+        </div>
+        {% endif %}
     </div>
-    
+
+    <!-- 注入环境变量供前端使用 -->
+    <script>
+        window.isDocker = {{ 'true' if is_docker else 'false' }};
+    </script>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>
         // 内联JavaScript，主要处理页面交互
