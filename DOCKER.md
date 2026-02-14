@@ -145,7 +145,7 @@ docker compose logs -f | grep "cookies"
 
 ### 注意事项
 
-- Cookie 文件会被挂载到容器中（只读）
+- Cookie 文件会被挂载到容器中（可写，允许 yt-dlp 更新 cookie）
 - Cookie 过期后需要重新导出并更新文件
 - 更新 cookie 文件后无需重启容器，直接刷新页面即可
 - 本地环境不受此配置影响
