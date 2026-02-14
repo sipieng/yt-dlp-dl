@@ -33,10 +33,6 @@ class YouTubeDownloader:
         self.downloads_dir = Path(downloads_dir)
         self.downloads_dir.mkdir(exist_ok=True)
 
-        # 添加 cookie 文件支持
-        if cookies_file and Path(cookies_file).exists():
-            self.base_opts["cookiefile"] = cookies_file
-
         # 基础yt-dlp选项
         self.base_opts = {
             "quiet": True,
@@ -69,6 +65,10 @@ class YouTubeDownloader:
             "getduration": False,
             "gettitle": False,
         }
+
+        # 添加 cookie 文件支持（必须在 base_opts 定义之后）
+        if cookies_file and Path(cookies_file).exists():
+            self.base_opts["cookiefile"] = cookies_file
 
     def extract_info(self, url: str) -> Dict[str, Any]:
         """
