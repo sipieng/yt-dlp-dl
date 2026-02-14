@@ -25,7 +25,15 @@ app.config["APPLICATION_ROOT"] = "/"
 app.config["PREFERRED_URL_SCHEME"] = "http"
 
 # 初始化下载器
-downloader = YouTubeDownloader(downloads_dir="downloads")
+# 在 Docker 环境下尝试加载 cookies.txt
+cookies_file = None
+if IS_DOCKER:
+    cookies_path = Path("cookies.txt")
+    if cookies_path.exists():
+        cookies_file = str(cookies_path)
+        print("✅ 已加载 cookies.txt（Docker 环境）")
+
+downloader = YouTubeDownloader(downloads_dir="downloads", cookies_file=cookies_file)
 
 # 确保下载目录存在
 downloads_dir = Path("downloads")

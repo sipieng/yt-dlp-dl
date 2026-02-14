@@ -20,15 +20,22 @@ from yt_dlp.utils import DownloadError, ExtractorError, sanitize_filename
 class YouTubeDownloader:
     """YouTube下载器服务类"""
 
-    def __init__(self, downloads_dir: str = "downloads"):
+    def __init__(
+        self, downloads_dir: str = "downloads", cookies_file: Optional[str] = None
+    ):
         """
         初始化下载器
 
         Args:
             downloads_dir: 下载文件存储目录
+            cookies_file: Cookie 文件路径（可选）
         """
         self.downloads_dir = Path(downloads_dir)
         self.downloads_dir.mkdir(exist_ok=True)
+
+        # 添加 cookie 文件支持
+        if cookies_file and Path(cookies_file).exists():
+            self.base_opts["cookiefile"] = cookies_file
 
         # 基础yt-dlp选项
         self.base_opts = {

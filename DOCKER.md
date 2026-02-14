@@ -60,7 +60,7 @@ docker stop yt-dlp-dl && docker rm yt-dlp-dl
 
 ## 配置说明
 
-### docker-compose.yml 配置
+### docker compose 配置
 
 ```yaml
 services:
@@ -105,6 +105,54 @@ environment:
 
 ---
 
+## YouTube Cookie 配置
+
+由于 YouTube 防爬虫机制，某些情况下可能需要使用浏览器 cookie 才能正常下载视频。
+
+### 提取 Cookie
+
+**方法一：使用浏览器扩展（推荐）**
+
+1. 安装浏览器扩展 [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/)
+2. 访问 YouTube 并登录
+3. 点击扩展图标，导出 cookie 为 `cookies.txt`
+4. 将文件保存在项目根目录
+
+**方法二：使用命令行工具**
+
+```bash
+# 使用 yt-dlp 直接从浏览器导出 cookie
+yt-dlp --cookies-from-browser chrome --print-to-file cookies.txt
+
+# 或使用 Firefox
+yt-dlp --cookies-from-browser firefox --print-to-file cookies.txt
+```
+
+### 配置步骤
+
+```bash
+# 1. 将导出的 cookies.txt 放在项目根目录
+cp /path/to/cookies.txt ./cookies.txt
+
+# 2. 重启容器
+docker compose down
+docker compose up -d
+
+# 3. 查看日志，确认 cookie 已加载
+docker compose logs -f | grep "cookies"
+# 应该看到：✅ 已加载 cookies.txt（Docker 环境）
+```
+
+### 注意事项
+
+- Cookie 文件会被挂载到容器中（只读）
+- Cookie 过期后需要重新导出并更新文件
+- 更新 cookie 文件后无需重启容器，直接刷新页面即可
+- 本地环境不受此配置影响
+- **隐私提醒**：cookie 包含您的账户信息，请妥善保管
+
+---
+
 ## 访问服务
 
 部署完成后，在浏览器中访问：
@@ -140,7 +188,7 @@ server {
 Docker 环境下，下载的文件存储在挂载的卷中：
 
 - 默认位置：`./downloads`（项目目录下）
-- 自定义位置：根据 `docker-compose.yml` 中的卷挂载配置
+- 自定义位置：根据 `docker compose` 配置中的卷挂载设置
 
 ### 访问下载的文件
 
@@ -253,7 +301,7 @@ docker compose up -d
 
 ### 限制资源使用
 
-在 `docker-compose.yml` 中添加：
+在 `docker compose.yml` 配置文件中添加：
 
 ```yaml
 services:

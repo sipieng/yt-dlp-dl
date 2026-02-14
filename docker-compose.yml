@@ -10,6 +10,8 @@ services:
     volumes:
       # 挂载下载目录到宿主机（可选：改为你的实际路径）
       - ./downloads:/app/downloads
+      # 挂载 cookies 文件（如果存在，避免权限问题）
+      - ./cookies.txt:/app/cookies.txt:ro  # 只读挂载
     environment:
       # 标识运行在 Docker 环境中
       - IS_DOCKER=true
