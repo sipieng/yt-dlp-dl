@@ -26,6 +26,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 安装必要系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    unzip \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
