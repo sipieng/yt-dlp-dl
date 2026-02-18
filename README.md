@@ -276,13 +276,13 @@ uv add yt-dlp -U
 
 ### VPS 通过 Docker 部署后解析视频报错
 
-YouTube 为了防止机器人采集，设置了 `n challenge`。通过 Docker 在 VPS 上部署时可能会出现由此产生的视频解析错误。此时需要引入浏览器的 Cookies 以跳过此挑战。方法是：
+有些网站如 Bilibili 和 YouTube 等为了防止机器人采集，设置了 `n challenge`。通过 Docker 在 VPS 上部署时可能会出现由此产生的视频解析错误。此时需要引入浏览器的 Cookies 以跳过此挑战。方法是：
 
 1) Chrome 浏览器安装 [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) 插件，或者 Firefox 安装 [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) 插件.
 
-2) 打开“无痕窗口”（Chrome）或者“隐私窗口”（Firefox），登录 YouTube，然后在**当前页**打开 `https://www.youtube.com/robots.txt` 页面，再用前面安装的浏览器插件仅下载当前网站（YouTube）的 Cookies。
+2) 打开“无痕窗口”（Chrome）或者“隐私窗口”（Firefox），登录 Bilibili 或者 YouTube 等打开了防护的网站，再用前面安装的浏览器插件仅下载当前网站的 Cookies。
 
-3) 将下载的 Cookies 命名为 `cookies.txt` 并保存在项目根目录。
+3) 将下载的 Cookies 命名为 `cookies.txt` 并保存在项目根目录。如果是多个网站，可以把 Cookies 拼接在一起（带 `#` 的文件头注释只要开头出现一次）。
 
 ## 更新日志
 
