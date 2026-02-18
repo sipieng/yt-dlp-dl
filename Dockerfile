@@ -29,6 +29,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# 安装Deno (yt-dlp JavaScript运行时)
+RUN curl -fsSL https://deno.land/install.sh | sh && \
+    mv /root/.deno/bin/deno /usr/local/bin/deno && \
+    chown root:root /usr/local/bin/deno && \
+    chmod +x /usr/local/bin/deno && \
+    rm -rf /root/.deno
+
 # 创建非 root 用户
 RUN useradd -m -u 1000 appuser
 
