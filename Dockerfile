@@ -51,14 +51,15 @@ ENV PATH="/app/.venv/bin:$PATH"
 # 复制应用代码
 COPY --chown=appuser:appuser . .
 
+# 复制并设置 entrypoint 脚本
+COPY --chown=root:root entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # 创建下载目录且确保权限正确
 RUN mkdir -p /app/downloads && chown -R appuser:appuser /app/downloads
 
 # 如果你的 run.py 需要执行权限
 RUN chmod +x /app/run.py
-
-# 切换到非 root 用户
-USER appuser
 
 # 暴露端口（使用环境变量）
 ENV PORT=5000

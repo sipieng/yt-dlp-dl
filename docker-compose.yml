@@ -22,6 +22,10 @@ services:
       # Python 输出不缓冲
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    # 使用 root 启动容器，通过 entrypoint 修复权限后再切换到 appuser
+    user: root
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["python", "run.py"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/health"]
       interval: 30s
