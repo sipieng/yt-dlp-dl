@@ -64,6 +64,8 @@ class YouTubeDownloader:
             "geturl": False,
             "getduration": False,
             "gettitle": False,
+            # 启用远程EJS组件（用于YouTube JS挑战求解）
+            "remote_components": ["ejs:github"],
         }
 
         # 添加 cookie 文件支持（必须在 base_opts 定义之后）
