@@ -10,8 +10,6 @@
 
 [ ] 优化：自定义选择的音视频流与封装格式不符时（如选择了把 opus 音频封装入 mp4）自动调用 ffmpeg 转码。（优先级：低）
 
-[ ] 优化：通过docker部署到vps后，一些视频网站如youtube会出现`ERROR: Sign in to confirm you're not a bot.`的报错信息，导致解析失败。（优先级：高）
-
 ## 功能特性
 
 1. **URL解析**：输入视频URL，自动获取所有可用格式（视频、音频、字幕）
@@ -40,40 +38,21 @@
 
 7. **Docker 支持**：完整的容器化部署方案，同时适合本地与 VPS/云服务器
 
+8. **YouTube 完整支持**：集成 Deno JavaScript 运行时和 EJS 挑战求解器，支持所有 YouTube 格式
+
 ## 系统要求
 
 ### 本地运行
 * Python 3.13+
-* yt-dlp 2025.12.8+
+* yt-dlp 2026.02.04+
 * Flask 3.0+
+* Deno 2.6.10+（仅 VPS/云服务器部署的 Docker 需要，会在构建镜像时自动安装）
 
 ### Docker 部署
 * Docker 20.10+
 * Docker Compose 2.0+
 
 ## 安装与运行
-
-### Docker 部署
-
-```bash
-# 创建 .env 文件（可选，自定义配置）
-cp .env.example .env
-
-# 使用 Docker Compose 启动
-docker compose up -d
-
-# 访问 Web 界面（默认端口 5000，可通过 .env 修改）
-# 本地: http://127.0.0.1:{PORT}
-# VPS: http://your-vps-ip:{PORT}
-
-# 查看日志
-docker compose logs -f
-
-# 停止服务
-docker compose down
-```
-
-详细说明请参考：[DOCKER.md](DOCKER.md)
 
 ### 本地运行
 
@@ -109,12 +88,36 @@ run.bat
 uv run run.py
 ```
 
-### 4. 访问Web界面
+#### 4. 访问Web界面
 
 服务器启动后，在浏览器中打开：
 👉 **http://127.0.0.1:{PORT}**
 
 其中 `{PORT}` 是你在 `.env` 中配置的端口（默认 5000）
+
+### Docker 部署
+
+```bash
+# 创建 .env 文件（可选，自定义配置）
+cp .env.example .env
+
+# 使用 Docker Compose 启动
+docker compose up -d
+
+# 访问 Web 界面（默认端口 5000，可通过 .env 修改）
+# 本地: http://127.0.0.1:{PORT}
+# VPS: http://your-vps-ip:{PORT}
+
+# 查看日志
+docker compose logs -f
+
+# 停止服务
+docker compose down
+```
+
+**如果 VPS 通过 docker 部署后出现无法解析的情况，请参见 [故障排除：VPS 通过 Docker 部署后解析视频报错](#vps-通过-docker-部署后解析视频报错)。
+
+详细说明请参考：[DOCKER.md](DOCKER.md)
 
 ## 技术架构
 
@@ -127,6 +130,7 @@ yt-dlp-dl/
 ├── run.bat                   # Windows启动脚本
 ├── Dockerfile                # Docker镜像构建文件
 ├── docker-compose.yml        # Docker Compose配置
+├── entrypoint.sh             # Docker入口脚本（修复卷挂载权限）
 ├── .dockerignore             # Docker构建忽略文件
 ├── .env.example             # 环境变量配置示例
 ├── DOCKER.md                # Docker部署文档
@@ -178,9 +182,11 @@ yt-dlp-dl/
 WARNING: [youtube] No supported JavaScript runtime could be found...
 ```
 
-**原因**：yt-dlp需要JavaScript运行时来解析某些YouTube格式。
-**解决方案**：安装一个JS运行时（如Deno）：
+**原因**：旧版本yt-dlp需要JavaScript运行时来解析某些YouTube格式。
 
+**解决方案**：已在 v2.0.2 版本中修复，Docker 镜像自动包含 Deno 2.6.10 和 `yt-dlp-ejs` 组件，无需手动安装。
+
+**本地环境**（如需手动安装）：
 ```bash
 # 安装Deno（推荐）
 uv add deno
@@ -194,13 +200,12 @@ uv add nodejs
 ### Q2: 文件保存位置
 
 下载的文件默认保存在项目目录下的 `downloads/` 文件夹中。
-可在Web界面中通过"浏览..."按钮选择其他文件夹，或使用"桌面"快捷按钮快速切换到桌面。
-也可直接在服务器文件系统中访问下载目录。
+本地版可在 Web 界面中通过"浏览..."按钮选择其他文件夹，或使用"桌面"快捷按钮快速切换到桌面。
+VPS/服务器可直接在服务器项目下的 downloads 目录中访问下载文件。
 
 ### Q3: 同时下载多个视频
 
-当前版本设计为**单任务下载**，一次只能处理一个下载任务。
-这是为了防止服务器资源过载。下载完成后可开始新任务。
+当前版本暂时设计为**单任务下载**，一次只能处理一个下载任务。
 
 ### Q4: 支持哪些视频网站？
 
@@ -219,49 +224,6 @@ uv add nodejs
 * TikTok
 
 * 等1000+个网站
-
-### Q5: Docker 环境如何访问下载的文件？
-
-**方式一：通过 Web 界面下载**
-1. 下载完成后，点击"⬇️ 保存文件"按钮
-2. 或右键选择"另存为"保存文件
-
-**方式二：通过卷挂载访问**
-```bash
-# 查看下载的文件
-ls -la ./downloads
-```
-
-### Q6: 如何修改端口？
-
-**本地运行和 Docker 部署均通过 `.env` 文件统一配置端口：**
-
-```bash
-# .env
-PORT=8080
-```
-
-**Docker 环境需要重启容器：**
-```bash
-docker compose down
-docker compose up -d
-```
-
-**本地环境只需重新启动即可，会自动读取 `.env` 中的配置。**
-
-## 注意事项
-
-1. **版权提醒**：请仅下载您有权下载的视频内容，遵守相关法律法规。
-
-2. **资源使用**：视频下载会占用网络带宽和服务器存储空间。
-
-3. **文件保留**：下载的文件永久保留在下载目录中，请定期清理。
-
-4. **单任务限制**：同时只允许一个下载任务，避免服务器过载。
-
-5. **Docker 卷挂载**：部署到 VPS 时，建议将下载目录挂载到大容量磁盘。
-
-6. **端口安全**：生产环境建议使用反向代理（如 Nginx）+ HTTPS。
 
 ## 故障排除
 
@@ -303,22 +265,6 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-### 本地环境问题
-
-### 无法启动Flask服务器
-
-```bash
-# 检查Python版本
-python --version
-
-# 检查依赖是否安装
-uv pip list | grep -E "(flask|yt-dlp)"
-
-# 检查端口占用（将 5000 替换为你的配置端口）
-netstat -ano | findstr :{PORT}  # Windows
-lsof -i :{PORT}                 # macOS/Linux
-```
-
 ### 无法解析某些视频
 
 ```bash
@@ -328,17 +274,41 @@ uv add yt-dlp -U
 # 检查视频URL是否有效
 ```
 
-### 下载进度不更新
+### VPS 通过 Docker 部署后解析视频报错
 
-* 刷新页面重新连接
+YouTube 为了防止机器人采集，设置了 `n challenge`。通过 Docker 在 VPS 上部署时可能会出现由此产生的视频解析错误。此时需要引入浏览器的 Cookies 以跳过此挑战。方法是：
 
-* 检查浏览器控制台是否有JavaScript错误
+1) Chrome 浏览器安装 [Get cookies.txt LOCALLY](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) 插件，或者 Firefox 安装 [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/) 插件.
 
-* 重启Flask服务器
+2) 打开“无痕窗口”（Chrome）或者“隐私窗口”（Firefox），登录 YouTube，然后在**当前页**打开 `https://www.youtube.com/robots.txt` 页面，再用前面安装的浏览器插件仅下载当前网站（YouTube）的 Cookies。
+
+3) 将下载的 Cookies 命名为 `cookies.txt` 并保存在项目根目录。
 
 ## 更新日志
 
-### v2.0.1 (2026-02-18)
+### v2.2.0 (2026-02-18)
+
+* **YouTube JS 挑战求解修复** 🔧
+  * 添加 Deno 2.6.10 JavaScript 运行时（Dockerfile）
+  * 添加 `unzip` 系统依赖（Deno 安装需要）
+  * 配置 `yt-dlp[default]` extra 依赖，包含 `yt-dlp-ejs`
+  * 显式添加 `yt-dlp-ejs>=0.4.0` 依赖（本地安装 EJS 脚本）
+  * 在 `services/downloader.py` 中启用 `remote_components: ["ejs:github"]`
+  * 移除 `uv sync --frozen` 选项，允许更新依赖
+
+* **Docker 卷挂载权限修复** 🐛
+  * 新增 `entrypoint.sh` 入口脚本
+  * 修复卷挂载后 `downloads` 目录权限问题
+  * 容器以 `root` 启动，修复权限后切换到 `appuser` 执行应用
+
+* **Dockerfile 优化** 📦
+  * 多阶段构建保持不变
+  * Deno 安装到 `/usr/local/bin/deno`，所有用户可访问
+
+* **配置文件更新**
+  * `docker-compose.yml`: 使用 `entrypoint.sh` 和 `user: root`
+
+### v2.1.0 (2026-02-18)
 
 * **端口配置修复** 🔧
   * 移除所有硬编码的 5000 端口，改为通过 `PORT` 环境变量统一配置
