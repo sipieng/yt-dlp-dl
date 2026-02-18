@@ -52,12 +52,13 @@ RUN chmod +x /app/run.py
 # 切换到非 root 用户
 USER appuser
 
-# 暴露端口
-EXPOSE 5000
+# 暴露端口（使用环境变量）
+ENV PORT=5000
+EXPOSE ${PORT}
 
-# 健康检查
+# 健康检查（使用环境变量）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
+    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # 启动应用（不使用 debug 模式）
 CMD ["python", "run.py"]

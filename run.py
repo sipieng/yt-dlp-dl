@@ -10,6 +10,10 @@ import webbrowser
 import threading
 import time
 from pathlib import Path
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 
 def main():

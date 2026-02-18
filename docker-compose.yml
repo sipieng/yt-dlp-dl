@@ -6,7 +6,7 @@ services:
     image: yt-dlp-web-ui:latest
     container_name: yt-dlp-dl
     ports:
-      - "${PORT:-5000}:5000"
+      - "${PORT:-5000}:${PORT:-5000}"
     volumes:
       # 挂载下载目录到宿主机（可选：改为你的实际路径）
       - ./downloads:/app/downloads
@@ -15,13 +15,15 @@ services:
     environment:
       # 标识运行在 Docker 环境中
       - IS_DOCKER=true
+      # 端口配置（如果 .env 中设置了 PORT，会自动读取）
+      - PORT=${PORT:-5000}
       # 设置时区（可选：根据需要修改）
       - TZ=Asia/Shanghai
       # Python 输出不缓冲
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-5000}/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -62,9 +62,9 @@ cp .env.example .env
 # 使用 Docker Compose 启动
 docker compose up -d
 
-# 访问 Web 界面
-# 本地: http://127.0.0.1:5000
-# VPS: http://your-vps-ip:5000
+# 访问 Web 界面（默认端口 5000，可通过 .env 修改）
+# 本地: http://127.0.0.1:{PORT}
+# VPS: http://your-vps-ip:{PORT}
 
 # 查看日志
 docker compose logs -f
@@ -86,23 +86,35 @@ docker compose down
 uv sync
 ```
 
-#### 2. 启动Web UI
+#### 2. 配置端口（可选）
+
+在项目根目录创建 `.env` 文件来自定义端口：
 
 ```bash
-# 创建 .env 文件（可选，自定义端口）
-echo "PORT=5000" > .env
+# .env 文件内容示例
+PORT=7105
+TZ=Asia/Shanghai
+PYTHONUNBUFFERED=1
+```
 
-# 方法1：直接运行批处理文件（Windows）
+**注意**：默认端口为 5000（未配置时）
+
+#### 3. 启动Web UI
+
+```bash
+# 方法1：直接运行批处理文件（Windows，推荐）
 run.bat
 
 # 方法2：直接运行Python脚本
 uv run run.py
 ```
 
-### 3. 访问Web界面
+### 4. 访问Web界面
 
 服务器启动后，在浏览器中打开：
-👉 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+👉 **http://127.0.0.1:{PORT}**
+
+其中 `{PORT}` 是你在 `.env` 中配置的端口（默认 5000）
 
 ## 技术架构
 
@@ -220,21 +232,22 @@ uv add nodejs
 ls -la ./downloads
 ```
 
-### Q6: 如何修改 Docker 部署的端口？
+### Q6: 如何修改端口？
 
-在项目根目录创建 `.env` 文件：
+**本地运行和 Docker 部署均通过 `.env` 文件统一配置端口：**
 
 ```bash
 # .env
 PORT=8080
 ```
 
-然后重启容器：
-
+**Docker 环境需要重启容器：**
 ```bash
 docker compose down
 docker compose up -d
 ```
+
+**本地环境只需重新启动即可，会自动读取 `.env` 中的配置。**
 
 ## 注意事项
 
@@ -260,8 +273,8 @@ docker compose up -d
 # 查看容器日志
 docker logs yt-dlp-dl
 
-# 检查端口是否被占用
-netstat -tulpn | grep 5000
+# 检查端口是否被占用（将 5000 替换为你的配置端口）
+netstat -tulpn | grep {PORT}
 ```
 
 **无法访问 Web 界面**
@@ -301,9 +314,9 @@ python --version
 # 检查依赖是否安装
 uv pip list | grep -E "(flask|yt-dlp)"
 
-# 检查端口占用
-netstat -ano | findstr :5000  # Windows
-lsof -i :5000                 # macOS/Linux
+# 检查端口占用（将 5000 替换为你的配置端口）
+netstat -ano | findstr :{PORT}  # Windows
+lsof -i :{PORT}                 # macOS/Linux
 ```
 
 ### 无法解析某些视频
@@ -324,6 +337,26 @@ uv add yt-dlp -U
 * 重启Flask服务器
 
 ## 更新日志
+
+### v2.0.1 (2026-02-18)
+
+* **端口配置修复** 🔧
+  * 移除所有硬编码的 5000 端口，改为通过 `PORT` 环境变量统一配置
+  * 添加 `python-dotenv` 依赖，自动加载 `.env` 文件
+  * 本地和 Docker 环境均支持自定义端口
+
+* **环境检测优化** 🐛
+  * 修复 `.env` 中 `IS_DOCKER=true` 导致本地运行时无法自动打开浏览器的问题
+  * `run.bat` 自动设置 `IS_DOCKER=false`
+  * `docker-compose.yml` 自动设置 `IS_DOCKER=true`
+
+* **Windows 启动脚本修复** 🪟
+  * 修复 `run.bat` 乱码问题，改用 ASCII 编码
+  * 自动打开浏览器功能恢复正常
+
+* **配置文件更新**
+  * `.env.example` 移除 `IS_DOCKER` 配置项
+  * Dockerfile 健康检查使用 `${PORT}` 环境变量
 
 ### v2.0.0 (2026-02-13)
 

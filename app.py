@@ -20,7 +20,7 @@ IS_DOCKER = os.environ.get("IS_DOCKER", "false").lower() in ("true", "1", "yes")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.urandom(24).hex()
 app.config["JSON_AS_ASCII"] = False  # 允许JSON包含非ASCII字符
-app.config["SERVER_NAME"] = "127.0.0.1:5000"
+app.config["SERVER_NAME"] = f"127.0.0.1:{os.environ.get('PORT', '5000')}"
 app.config["APPLICATION_ROOT"] = "/"
 app.config["PREFERRED_URL_SCHEME"] = "http"
 
@@ -606,4 +606,4 @@ def cleanup_old_tasks():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))

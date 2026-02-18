@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
-echo 正在通过 uv 启动...
+set IS_DOCKER=false
+set PYTHONIOENCODING=utf-8
 uv run run.py
 pause
