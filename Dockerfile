@@ -15,7 +15,7 @@ COPY pyproject.toml uv.lock ./
 # ENV UV_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple/
 
 # 安装依赖到 .venv
-RUN uv sync --frozen --no-dev
+RUN uv sync --no-dev
 
 # 第二阶段：运行环境
 FROM python:3.13-slim
