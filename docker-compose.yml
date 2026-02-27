@@ -1,5 +1,5 @@
 # 本文件用于生产环境，可直接运行 `docker compose up -d`
-# 本地开发环境则运行 `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d`
+# 不能用于本地开发环境。本地可用 `uv run python run.py` 或运行 run.bat
 
 services:
   yt-dlp-web:
