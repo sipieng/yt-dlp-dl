@@ -1,6 +1,6 @@
 # yt-dlp Web UI
 
-**使用 AI 开发。在 Windows 11 下测试通过。**
+**使用 AI 开发。在 Windows 11 和 VPS 下测试通过。**
 
 基于Flask的Web界面，为yt-dlp提供图形化操作界面。支持解析视频格式、选择下载质量、自定义文件名等功能。
 
@@ -36,7 +36,7 @@
 
 6. **智能防覆盖**：重复下载自动重命名，避免覆盖旧文件
 
-7. **Docker 支持**：完整的容器化部署方案，同时适合本地与 VPS/云服务器
+7. **Docker 支持**：完整的容器化部署方案，适合 VPS/云服务器。**docker-compose.yml 使用 VPS 环境，不适用本地。本地请用 uv 运行。**
 
 8. **YouTube 完整支持**：集成 Deno JavaScript 运行时和 EJS 挑战求解器，支持所有 YouTube 格式
 
@@ -85,7 +85,7 @@ PYTHONUNBUFFERED=1
 run.bat
 
 # 方法2：直接运行Python脚本
-uv run run.py
+uv run python run.py
 ```
 
 #### 4. 访问Web界面
@@ -95,7 +95,7 @@ uv run run.py
 
 其中 `{PORT}` 是你在 `.env` 中配置的端口（默认 5000）
 
-### Docker 部署
+### VPS 端 Docker 部署
 
 ```bash
 # 创建 .env 文件（可选，自定义配置）
@@ -105,7 +105,6 @@ cp .env.example .env
 docker compose up -d
 
 # 访问 Web 界面（默认端口 5000，可通过 .env 修改）
-# 本地: http://127.0.0.1:{PORT}
 # VPS: http://your-vps-ip:{PORT}
 
 # 查看日志
@@ -285,6 +284,13 @@ uv add yt-dlp -U
 3) 将下载的 Cookies 命名为 `cookies.txt` 并保存在项目根目录。如果是多个网站，可以把 Cookies 拼接在一起（带 `#` 的文件头注释只要开头出现一次）。
 
 ## 更新日志
+
+### v2.3.0 (2026-02-27)
+
+* **更新 docker-compose.yml 以适合 VPS 环境** 🔧
+  * `ports` 改为 `expose`
+  * 加入 docker 内部网络 `proxy_network` 避免公网暴露端口
+  * 更新后无法在本地 docker 运行。本地可使用 `uv run run.py` 或者直接运行 run.bat
 
 ### v2.2.0 (2026-02-18)
 
