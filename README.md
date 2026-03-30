@@ -8,8 +8,6 @@
 
 [ ] 优化：选择一条视频加两条音频，默认得到的结果无论是mp4还是mkv都只有一条视频和一条音频。（优先级：低）
 
-[ ] 优化：自定义选择的音视频流与封装格式不符时（如选择了把 opus 音频封装入 mp4）自动调用 ffmpeg 转码。（优先级：低）
-
 ## 功能特性
 
 1. **URL解析**：输入视频URL，自动获取所有可用格式（视频、音频、字幕）
@@ -36,7 +34,7 @@
 
 6. **智能防覆盖**：重复下载自动重命名，避免覆盖旧文件
 
-7. **Docker 支持**：完整的容器化部署方案，适合 VPS/云服务器。**docker-compose.yml 使用 VPS 环境，不适用本地。本地请用 uv 运行。**
+7. **Docker 支持**：完整的容器化部署方案，适合 VPS/云服务器。**compose.yaml 使用 VPS 环境，不适用本地。本地请用 uv 运行。**
 
 8. **YouTube 完整支持**：集成 Deno JavaScript 运行时和 EJS 挑战求解器，支持所有 YouTube 格式
 
@@ -128,25 +126,25 @@ yt-dlp-dl/
 ├── run.py                    # 启动脚本
 ├── run.bat                   # Windows启动脚本
 ├── Dockerfile                # Docker镜像构建文件
-├── docker-compose.yml        # Docker Compose配置
+├── compose.yaml              # Docker Compose配置
 ├── entrypoint.sh             # Docker入口脚本（修复卷挂载权限）
 ├── .dockerignore             # Docker构建忽略文件
-├── .env.example             # 环境变量配置示例
-├── DOCKER.md                # Docker部署文档
+├── .env.example              # 环境变量配置示例
+├── DOCKER.md                 # Docker部署文档
 ├── services/
 │   └── downloader.py         # yt-dlp下载器服务
 ├── templates/
-│   └── index.html           # 主界面模板
+│   └── index.html            # 主界面模板
 ├── static/
 │   ├── css/
-│   │   └── style.css        # 样式表
+│   │   └── style.css         # 样式表
 │   └── js/
-│       └── script.js        # 前端交互逻辑
-├── downloads/               # 下载文件存储目录
-├── .gitignore              # Git忽略规则
-├── pyproject.toml          # 项目配置
-├── uv.lock                 # 依赖锁定
-└── README.md               # 本文档
+│       └── script.js         # 前端交互逻辑
+├── downloads/                # 下载文件存储目录
+├── .gitignore                # Git忽略规则
+├── pyproject.toml            # 项目配置
+├── uv.lock                   # 依赖锁定
+└── README.md                 # 本文档
 ```
 
 ### 后端API端点
@@ -287,7 +285,7 @@ uv add yt-dlp -U
 
 ### v2.3.0 (2026-02-27)
 
-* **更新 docker-compose.yml 以适合 VPS 环境** 🔧
+* **更新 compose.yaml 以适合 VPS 环境** 🔧
   * `ports` 改为 `expose`
   * 加入 docker 内部网络 `proxy_network` 避免公网暴露端口
   * 更新后无法在本地 docker 运行。本地可使用 `uv run run.py` 或者直接运行 run.bat
